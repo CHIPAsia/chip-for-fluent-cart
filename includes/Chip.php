@@ -239,6 +239,8 @@ class Chip extends AbstractPaymentGateway
 
     public function fields()
     {
+        $settings = $this->settings->get();
+        
         return array(
             'chip_description' => array(
                 'value' =>
@@ -255,6 +257,49 @@ class Chip extends AbstractPaymentGateway
                     ]),
                 'label' => __('Description', 'chip-for-fluentcart'),
                 'type' => 'html_attr'
+            ),
+            'secret_key' => array(
+                'value' => $settings['secret_key'] ?? '',
+                'label' => __('Secret Key', 'chip-for-fluentcart'),
+                'type' => 'password',
+                'required' => true,
+                'description' => __('Your CHIP secret key. The payment mode (test/live) will be determined automatically based on this key.', 'chip-for-fluentcart')
+            ),
+            'brand_id' => array(
+                'value' => $settings['brand_id'] ?? '',
+                'label' => __('Brand ID', 'chip-for-fluentcart'),
+                'type' => 'text',
+                'required' => true,
+                'description' => __('Your CHIP Brand ID', 'chip-for-fluentcart')
+            ),
+            'payment_method_whitelist' => array(
+                'value' => $settings['payment_method_whitelist'] ?? [],
+                'label' => __('Payment Method Whitelist', 'chip-for-fluentcart'),
+                'type' => 'multi_select',
+                'required' => false,
+                'description' => __('Select which payment methods to allow. Leave empty to allow all methods.', 'chip-for-fluentcart'),
+                'options' => array(
+                    'fpx' => __('Online Banking (FPX)', 'chip-for-fluentcart'),
+                    'fpx_b2b1' => __('Corporate Online Banking (FPX)', 'chip-for-fluentcart'),
+                    'mastercard' => __('Mastercard', 'chip-for-fluentcart'),
+                    'maestro' => __('Maestro', 'chip-for-fluentcart'),
+                    'visa' => __('Visa', 'chip-for-fluentcart'),
+                    'razer_atome' => __('Atome', 'chip-for-fluentcart'),
+                    'razer_grabpay' => __('Razer GrabPay', 'chip-for-fluentcart'),
+                    'razer_maybankqr' => __('Razer MaybankQR', 'chip-for-fluentcart'),
+                    'razer_shopeepay' => __('Razer ShopeePay', 'chip-for-fluentcart'),
+                    'razer_tng' => __('Razer TnG', 'chip-for-fluentcart'),
+                    'duitnow_qr' => __('DuitNow QR', 'chip-for-fluentcart'),
+                    'mpgs_google_pay' => __('Google Pay', 'chip-for-fluentcart'),
+                    'mpgs_apple_pay' => __('Apple Pay', 'chip-for-fluentcart'),
+                )
+            ),
+            'email_fallback' => array(
+                'value' => $settings['email_fallback'] ?? '',
+                'label' => __('Email Fallback', 'chip-for-fluentcart'),
+                'type' => 'email',
+                'required' => false,
+                'description' => __('Fallback email address for purchase creation', 'chip-for-fluentcart')
             ),
         );
 
