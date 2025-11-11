@@ -272,12 +272,36 @@ class Chip extends AbstractPaymentGateway
                 'required' => true,
                 'description' => __('Your CHIP Brand ID', 'chip-for-fluentcart')
             ),
+            'email_fallback' => array(
+                'value' => $settings['email_fallback'] ?? '',
+                'label' => __('Email Fallback', 'chip-for-fluentcart'),
+                'type' => 'email',
+                'required' => false,
+                'description' => __('Fallback email address for purchase creation', 'chip-for-fluentcart')
+            ),
+            'payment_method_whitelist_heading' => array(
+                'value' =>
+                    wp_kses(sprintf(
+                        '<div class="pt-4 pb-2">
+                            <h3 class="text-lg font-semibold mb-2">%s</h3>
+                            <p class="text-sm text-gray-600">%s</p>
+                        </div>',
+                        __('Payment Method Whitelist', 'chip-for-fluentcart'),
+                        __('You may not tick any of the options to activate all payment methods.', 'chip-for-fluentcart')
+                    ),
+                    [
+                        'div' => ['class' => true],
+                        'h3' => ['class' => true],
+                        'p' => ['class' => true],
+                    ]),
+                'label' => __('Payment Method Whitelist', 'chip-for-fluentcart'),
+                'type' => 'html_attr'
+            ),
             'payment_method_whitelist' => array(
                 'value' => $settings['payment_method_whitelist'] ?? [],
-                'label' => __('Payment Method Whitelist', 'chip-for-fluentcart'),
-                'type' => 'multi_select',
+                'label' => '',
+                'type' => 'checkbox_group',
                 'required' => false,
-                'description' => __('Select which payment methods to allow. Leave empty to allow all methods.', 'chip-for-fluentcart'),
                 'options' => array(
                     'fpx' => __('Online Banking (FPX)', 'chip-for-fluentcart'),
                     'fpx_b2b1' => __('Corporate Online Banking (FPX)', 'chip-for-fluentcart'),
@@ -294,12 +318,12 @@ class Chip extends AbstractPaymentGateway
                     'mpgs_apple_pay' => __('Apple Pay', 'chip-for-fluentcart'),
                 )
             ),
-            'email_fallback' => array(
-                'value' => $settings['email_fallback'] ?? '',
-                'label' => __('Email Fallback', 'chip-for-fluentcart'),
-                'type' => 'email',
+            'debug' => array(
+                'value' => $settings['debug'] ?? 'no',
+                'label' => __('Enable Debug', 'chip-for-fluentcart'),
+                'type' => 'yes_no',
                 'required' => false,
-                'description' => __('Fallback email address for purchase creation', 'chip-for-fluentcart')
+                'description' => __('Enable debug mode to log payment processing details for troubleshooting.', 'chip-for-fluentcart')
             ),
         );
 
