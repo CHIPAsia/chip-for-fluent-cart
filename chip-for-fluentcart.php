@@ -54,7 +54,7 @@ require plugin_dir_path( __FILE__ ) . 'includes/class-chip-for-fluentcart.php';
 /**
  * Register CHIP payment gateway with FluentCart
  */
-add_action('fluentcart_loaded', function($app) {
+add_action('fluent_cart/init', function($app) {
 	// Include CHIP payment gateway classes
 	require_once plugin_dir_path( __FILE__ ) . 'includes/Chip.php';
 	require_once plugin_dir_path( __FILE__ ) . 'includes/ChipHandler.php';
