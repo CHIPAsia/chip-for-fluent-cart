@@ -48,12 +48,6 @@ register_activation_hook( __FILE__, 'activate_chip_for_fluentcart' );
 register_deactivation_hook( __FILE__, 'deactivate_chip_for_fluentcart' );
 
 /**
- * The core plugin class that is used to define internationalization,
- * admin-specific hooks, and public-facing site hooks.
- */
-require plugin_dir_path( __FILE__ ) . 'includes/class-chip-for-fluentcart.php';
-
-/**
  * Register CHIP payment gateway with FluentCart
  */
 add_action('fluent_cart/register_payment_methods', function($app) {
@@ -75,19 +69,3 @@ add_action('fluent_cart/register_payment_methods', function($app) {
         new \FluentCart\App\Modules\PaymentMethods\Chip\Chip()
     );
 });
-
-/**
- * Begins execution of the plugin.
- *
- * Since everything within the plugin is registered via hooks,
- * then kicking off the plugin from this point in the file does
- * not affect the page life cycle.
- *
- * @since    1.0.0
- */
-function run_chip_for_fluentcart() {
-	$plugin = new Chip_For_Fluentcart();
-	$plugin->run();
-}
-
-run_chip_for_fluentcart();
