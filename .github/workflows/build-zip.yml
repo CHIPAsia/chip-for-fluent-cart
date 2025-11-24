@@ -15,8 +15,16 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Generate zip
-      uses: 10up/action-wordpress-plugin-build-zip@stable
+      run: |
+        # Create zip file using git archive which automatically respects .gitignore
+        git archive --format=zip --output=chip-for-fluentcart.zip HEAD
+        
+        echo "✅ Created chip-for-fluentcart.zip"
+        ls -lh chip-for-fluentcart.zip
+
+    - name: Upload zip artifact
+      uses: actions/upload-artifact@v4
       with:
-        retention-days: 5 # Optional; defaults to 5
-      env:
-        SLUG: chip-for-fluentcart
+        name: chip-for-fluentcart
+        path: chip-for-fluentcart.zip
+        retention-days: 5
