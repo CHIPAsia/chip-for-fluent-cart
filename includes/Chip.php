@@ -6,6 +6,7 @@ use FluentCart\Api\Resource\OrderResource;
 use FluentCart\App\Events\Order\OrderStatusUpdated;
 use FluentCart\App\Services\DateTime\DateTime;
 use FluentCart\App\Helpers\Status;
+use FluentCart\App\Helpers\StatusHelper;
 use FluentCart\App\Models\Order;
 use FluentCart\App\Models\OrderMeta;
 use FluentCart\App\Models\OrderTransaction;
@@ -56,8 +57,8 @@ class Chip extends AbstractPaymentGateway
             'route' => 'chip',
             'slug' => 'chip',
             'description' => esc_html__('CHIP - Pay securely with CHIP Collect. Accept FPX, Cards, E-Wallet, Duitnow QR.', 'chip-for-fluentcart'),
-            'logo' => plugin_dir_url( dirname( __FILE__ ) ) . 'admin/images/chip.svg',
-            'icon' => plugin_dir_url( dirname( __FILE__ ) ) . 'admin/images/chip.svg',
+            'logo' => plugin_dir_url( dirname( __FILE__ ) ) . 'assets/logo.svg',
+            'icon' => plugin_dir_url( dirname( __FILE__ ) ) . 'assets/logo.svg',
             'brand_color' => '#136196',
             'upcoming' => false,
             'status' => $this->settings->get('is_active') === 'yes',
@@ -250,7 +251,15 @@ class Chip extends AbstractPaymentGateway
                 $paymentStatus = $this->checkPaymentStatus($purchaseId);
                 
                 if ($paymentStatus === 'paid') {
-                    // Payment is actually paid, redirect to success URL
+                    // Payment is actually paid, sync order status
+                    $orderTransaction->fill([
+                        'status' => Status::TRANSACTION_SUCCEEDED,
+                        'chip_purchase_id' => $purchaseId,
+                    ]);
+                    $orderTransaction->save();
+                    (new StatusHelper($order))->syncOrderStatuses($orderTransaction);
+                    
+                    // Redirect to success URL
                     $returnUrl = $this->getReturnUrl($orderTransaction);
                     wp_safe_redirect($returnUrl);
                     exit;
@@ -886,7 +895,7 @@ class Chip extends AbstractPaymentGateway
         // Get order ID from transaction or order object
         $orderId = $transaction->order_id;
 
-        $metaKey = '_chip_purchase_id';
+        $metaKey = 'chip_purchase_id';
         $metaValue = sanitize_text_field($purchaseId);
 
         // Use updateOrCreate to update existing or create new record
@@ -922,7 +931,7 @@ class Chip extends AbstractPaymentGateway
         if (!$orderId) {
             return null;
         }
-        $metaKey = '_chip_purchase_id';
+        $metaKey = 'chip_purchase_id';
 
         // Query using OrderMeta model
         $orderMeta = OrderMeta::query()->where('order_id', $orderId)

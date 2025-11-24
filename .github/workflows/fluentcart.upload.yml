@@ -1,0 +1,94 @@
+name: FluentCart - Upload Files
+
+on:
+  push:
+    tags:
+      - 'fluentcart-upload-v[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  deploy:
+    name: Upload files
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Git repo
+        uses: actions/checkout@v3
+
+      - name: Check if SVN credentials exist
+        id: check-svn
+        run: |
+          if [ -z "${{ secrets.SVN_USERNAME }}" ]; then
+            echo "SVN_USERNAME secret not found. Skipping SVN upload."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Extract version from tag
+        id: vars
+        run: |
+          TAG=${GITHUB_REF##*/}
+          VERSION=${TAG#fluentcart-upload-v}
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Create new version folder
+        if: steps.check-svn.outputs.skip != 'true'
+        run: |
+          VERSION="${{ steps.vars.outputs.version }}"
+          mkdir "$VERSION"
+          git archive HEAD | tar -x -C "$VERSION"
+
+      - name: Install SVN
+        if: steps.check-svn.outputs.skip != 'true'
+        run: sudo apt-get install -y subversion
+
+      - name: Checkout SVN
+        if: steps.check-svn.outputs.skip != 'true'
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+        run: |
+          svn checkout --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive --trust-server-cert https://plugins.svn.wordpress.org/chip-for-fluentcart/ svn-tags
+
+      - name: Check for version conflict
+        if: steps.check-svn.outputs.skip != 'true'
+        run: |
+          VERSION="${{ steps.vars.outputs.version }}"
+          if [ -d "svn-tags/tags/$VERSION" ]; then
+            echo "❌ The tag '$VERSION' already exists in SVN. Aborting."
+            exit 1
+          fi
+
+      - name: Copy new version folder into tags folder
+        if: steps.check-svn.outputs.skip != 'true'
+        run: |
+          VERSION="${{ steps.vars.outputs.version }}"
+          cp -R "$VERSION" "svn-tags/tags"
+
+      - name: Track new version folder
+        if: steps.check-svn.outputs.skip != 'true'
+        run: |
+          VERSION="${{ steps.vars.outputs.version }}"
+          cd svn-tags/tags
+          svn add "$VERSION"
+
+      - name: List file changes
+        if: steps.check-svn.outputs.skip != 'true'
+        run: |
+          cd svn-tags
+          echo "SVN status:"
+          svn status
+
+      - name: Commit changes to SVN
+        if: steps.check-svn.outputs.skip != 'true'
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+
+          cd svn-tags
+          svn commit -m "$COMMIT_MSG" \
+            --username "$SVN_USERNAME" \
+            --password "$SVN_PASSWORD" \
+            --non-interactive --trust-server-cert

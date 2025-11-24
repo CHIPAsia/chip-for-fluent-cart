@@ -1,19 +1,12 @@
 === CHIP for FluentCart ===
 
 Contributors: chipasia, wanzulnet
-
 Tags: chip, fluentcart, payment
-
 Requires at least: 6.8
-
 Tested up to: 6.8
-
 Stable tag: 1.0.0
-
 Requires PHP: 7.4
-
 License: GPLv3
-
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
 CHIP - Digital Finance Platform. Securely accept one-time and subscription payment with CHIP for FluentCart.

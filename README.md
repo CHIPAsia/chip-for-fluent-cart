@@ -1,4 +1,4 @@
-<img src="./admin/images/chip.svg" alt="CHIP Logo" width="50"/>
+<img src="./assets/logo.svg" alt="CHIP Logo" width="50"/>
 
 # CHIP for FluentCart
 
