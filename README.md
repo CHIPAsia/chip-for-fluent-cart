@@ -16,7 +16,7 @@ This module adds CHIP payment method option to your WordPress-based FluentCart s
 
 ## Requirements
 
-* WordPress 5.0 or higher
+* WordPress 6.8 or higher
 * FluentCart plugin installed and activated
 * PHP 7.4 or higher
 
