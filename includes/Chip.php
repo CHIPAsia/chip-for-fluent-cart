@@ -8,6 +8,7 @@ use FluentCart\App\Services\DateTime\DateTime;
 use FluentCart\App\Helpers\Status;
 use FluentCart\App\Models\Order;
 use FluentCart\App\Models\OrderMeta;
+use FluentCart\App\Models\OrderTransaction;
 use FluentCart\App\Models\Subscription;
 use FluentCart\App\Modules\PaymentMethods\Core\AbstractPaymentGateway;
 use FluentCart\App\Modules\PaymentMethods\Core\BaseGatewaySettings;
@@ -43,9 +44,6 @@ class Chip extends AbstractPaymentGateway
         // Register webhook handlers
         add_action('wp_ajax_chip_webhook', [$this, 'handleWebhook']);
         add_action('wp_ajax_nopriv_chip_webhook', [$this, 'handleWebhook']);
-        
-        // Register init redirect handler using init hook (not admin-ajax)
-        add_action('init', [$this, 'handleInitRedirect']);
         
         // Register settings filter
         add_filter('fluent_cart/payment_methods/chip_settings', [$this, 'getSettings']);
@@ -202,24 +200,24 @@ class Chip extends AbstractPaymentGateway
             exit(__('Invalid redirect passphrase', 'chip-for-fluentcart'));
         }
 
-        // Get transaction UUID
+        // Get transaction UUID from URL
         $transactionUuid = isset($_GET['transaction_uuid']) ? sanitize_text_field($_GET['transaction_uuid']) : '';
         
         if (empty($transactionUuid)) {
             status_header(400);
-            exit(__('Invalid transaction', 'chip-for-fluentcart'));
+            exit(__('Invalid transaction UUID', 'chip-for-fluentcart'));
         }
 
-        // Get transaction by UUID
-        $transaction = \FluentCart\App\Models\Transaction::where('uuid', $transactionUuid)->first();
+        // Get order transaction by UUID using OrderTransaction model
+        $orderTransaction = OrderTransaction::where('uuid', $transactionUuid)->first();
         
-        if (!$transaction) {
+        if (!$orderTransaction) {
             status_header(404);
             exit(__('Transaction not found', 'chip-for-fluentcart'));
         }
 
         // Get order from transaction
-        $order = OrderResource::getQuery()->find($transaction->order_id);
+        $order = OrderResource::getQuery()->find($orderTransaction->order_id);
         
         if (!$order) {
             status_header(404);
@@ -231,7 +229,7 @@ class Chip extends AbstractPaymentGateway
         usleep(500000); // 0.5 second delay
         
         // Refresh order data to get latest status (in case webhook updated it)
-        $order = OrderResource::getQuery()->find($transaction->order_id);
+        $order = OrderResource::getQuery()->find($orderTransaction->order_id);
 
         // Check if order status indicates payment is completed
         // Order is considered paid if status is PROCESSING or COMPLETED
@@ -240,12 +238,12 @@ class Chip extends AbstractPaymentGateway
 
         if ($isPaid) {
             // Order has been paid (possibly updated by webhook), redirect to success URL
-            $returnUrl = $this->getReturnUrl($transaction);
+            $returnUrl = $this->getReturnUrl($orderTransaction);
             wp_safe_redirect($returnUrl);
             exit;
         } else {
             // Order has not been paid, check API one-time to get latest payment status
-            $purchaseId = $this->getPurchaseId($transaction);
+            $purchaseId = $this->getPurchaseId($order);
             
             if ($purchaseId) {
                 // Call API to check latest payment status
@@ -253,14 +251,14 @@ class Chip extends AbstractPaymentGateway
                 
                 if ($paymentStatus === 'paid') {
                     // Payment is actually paid, redirect to success URL
-                    $returnUrl = $this->getReturnUrl($transaction);
+                    $returnUrl = $this->getReturnUrl($orderTransaction);
                     wp_safe_redirect($returnUrl);
                     exit;
                 }
             }
             
             // Payment is not paid, redirect to cancel URL
-            $cancelUrl = self::getCancelUrl($transaction);
+            $cancelUrl = self::getCancelUrl($orderTransaction);
             wp_safe_redirect($cancelUrl);
             exit;
         }
@@ -859,7 +857,7 @@ class Chip extends AbstractPaymentGateway
     {
         $orderId = $data['order_id'] ?? '';
         $order = Order::where('uuid', $orderId)->first();
-        
+
         if (!$order) {
             return new \WP_Error('order_not_found', 'Order not found');
         }
@@ -876,7 +874,7 @@ class Chip extends AbstractPaymentGateway
      * Store purchase ID in fct_order_meta table using OrderMeta model
      *
      * @since    1.0.0
-     * @param    object    $transaction    Transaction object
+     * @param    object    $transaction    Transaction object (or order object)
      * @param    string    $purchaseId     CHIP purchase ID
      */
     protected function storePurchaseId($transaction, $purchaseId)
@@ -885,18 +883,15 @@ class Chip extends AbstractPaymentGateway
             return;
         }
 
-        // Get order ID from transaction
-        if (!property_exists($transaction, 'order_id') || !$transaction->order_id) {
-            return;
-        }
-
+        // Get order ID from transaction or order object
         $orderId = $transaction->order_id;
+
         $metaKey = '_chip_purchase_id';
         $metaValue = sanitize_text_field($purchaseId);
 
         // Use updateOrCreate to update existing or create new record
         // Timestamps (created_at, updated_at) are handled automatically by the model
-        OrderMeta::updateOrCreate(
+        $a = OrderMeta::query()->updateOrCreate(
             [
                 'order_id' => $orderId,
                 'meta_key' => $metaKey
@@ -911,25 +906,26 @@ class Chip extends AbstractPaymentGateway
      * Get purchase ID from fct_order_meta table using OrderMeta model
      *
      * @since    1.0.0
-     * @param    object    $transaction    Transaction object
-     * @return   string|null                CHIP purchase ID or null if not found
+     * @param    object    $order    Order object
+     * @return   string|null          CHIP purchase ID or null if not found
      */
-    protected function getPurchaseId($transaction)
+    protected function getPurchaseId($order)
     {
-        if (!$transaction) {
+        if (!$order) {
             return null;
         }
 
-        // Get order ID from transaction
-        if (!property_exists($transaction, 'order_id') || !$transaction->order_id) {
+        // Get order ID from order object
+        // The order model has 'id' in its attributes array
+        $orderId = $order->id ?? null;
+
+        if (!$orderId) {
             return null;
         }
-
-        $orderId = $transaction->order_id;
         $metaKey = '_chip_purchase_id';
 
         // Query using OrderMeta model
-        $orderMeta = OrderMeta::where('order_id', $orderId)
+        $orderMeta = OrderMeta::query()->where('order_id', $orderId)
             ->where('meta_key', $metaKey)
             ->first();
 
