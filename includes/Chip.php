@@ -7,6 +7,7 @@ use FluentCart\App\Events\Order\OrderStatusUpdated;
 use FluentCart\App\Services\DateTime\DateTime;
 use FluentCart\App\Helpers\Status;
 use FluentCart\App\Models\Order;
+use FluentCart\App\Models\OrderMeta;
 use FluentCart\App\Models\Subscription;
 use FluentCart\App\Modules\PaymentMethods\Core\AbstractPaymentGateway;
 use FluentCart\App\Modules\PaymentMethods\Core\BaseGatewaySettings;
@@ -105,7 +106,7 @@ class Chip extends AbstractPaymentGateway
                 'customer_full_name' => $customerFullName,
                 'return_url' => $this->getReturnUrl($transaction),
                 'order_items' => $orderItems,
-                'cancel_url' => $this->getCancelUrl($transaction),
+                'cancel_url' => self::getCancelUrl($transaction),
                 'transaction_uuid' => $transaction->uuid
             ];
 
@@ -150,19 +151,6 @@ class Chip extends AbstractPaymentGateway
     {
         $paymentHelper = new \FluentCart\App\Services\Payments\PaymentHelper('chip');
         return $paymentHelper->successUrl($transaction->uuid);
-    }
-
-    /**
-     * Get cancel URL for cancelled payment
-     *
-     * @since    1.0.0
-     * @param    object    $transaction    Transaction object
-     * @return   string                     Cancel URL
-     */
-    protected function getCancelUrl($transaction)
-    {
-        $paymentHelper = new \FluentCart\App\Services\Payments\PaymentHelper('chip');
-        return $paymentHelper->cancelUrl($transaction->uuid);
     }
 
     /**
@@ -272,7 +260,7 @@ class Chip extends AbstractPaymentGateway
             }
             
             // Payment is not paid, redirect to cancel URL
-            $cancelUrl = $this->getCancelUrl($transaction);
+            $cancelUrl = self::getCancelUrl($transaction);
             wp_safe_redirect($cancelUrl);
             exit;
         }
@@ -885,7 +873,7 @@ class Chip extends AbstractPaymentGateway
     }
 
     /**
-     * Store purchase ID in transaction metadata
+     * Store purchase ID in fct_order_meta table using OrderMeta model
      *
      * @since    1.0.0
      * @param    object    $transaction    Transaction object
@@ -897,42 +885,30 @@ class Chip extends AbstractPaymentGateway
             return;
         }
 
-        // Store purchase ID in transaction metadata
-        // Try different methods depending on how FluentCart stores transaction metadata
-        if (method_exists($transaction, 'updateMeta')) {
-            $transaction->updateMeta('_chip_purchase_id', $purchaseId);
-        } elseif (method_exists($transaction, 'setMeta')) {
-            $transaction->setMeta('_chip_purchase_id', $purchaseId);
-        } elseif (property_exists($transaction, 'id') && $transaction->id) {
-            // Fallback to WordPress post meta if transaction has an ID
-            update_post_meta($transaction->id, '_chip_purchase_id', $purchaseId);
-        } else {
-            // Store in a custom property if available
-            $transaction->chip_purchase_id = $purchaseId;
-            if (method_exists($transaction, 'save')) {
-                $transaction->save();
-            }
+        // Get order ID from transaction
+        if (!property_exists($transaction, 'order_id') || !$transaction->order_id) {
+            return;
         }
 
-        // Also store in order metadata as backup (using transaction UUID as key)
-        if (property_exists($transaction, 'order_id') && $transaction->order_id) {
-            $order = OrderResource::getQuery()->find($transaction->order_id);
-            if ($order) {
-                // Store with transaction UUID as part of the key for uniqueness
-                $metaKey = '_chip_purchase_id_' . $transaction->uuid;
-                if (method_exists($order, 'updateMeta')) {
-                    $order->updateMeta($metaKey, $purchaseId);
-                } elseif (method_exists($order, 'setMeta')) {
-                    $order->setMeta($metaKey, $purchaseId);
-                } elseif (property_exists($order, 'id') && $order->id) {
-                    update_post_meta($order->id, $metaKey, $purchaseId);
-                }
-            }
-        }
+        $orderId = $transaction->order_id;
+        $metaKey = '_chip_purchase_id';
+        $metaValue = sanitize_text_field($purchaseId);
+
+        // Use updateOrCreate to update existing or create new record
+        // Timestamps (created_at, updated_at) are handled automatically by the model
+        OrderMeta::updateOrCreate(
+            [
+                'order_id' => $orderId,
+                'meta_key' => $metaKey
+            ],
+            [
+                'meta_value' => $metaValue
+            ]
+        );
     }
 
     /**
-     * Get purchase ID from transaction metadata
+     * Get purchase ID from fct_order_meta table using OrderMeta model
      *
      * @since    1.0.0
      * @param    object    $transaction    Transaction object
@@ -944,52 +920,21 @@ class Chip extends AbstractPaymentGateway
             return null;
         }
 
-        // Try different methods to retrieve purchase ID from transaction
-        if (method_exists($transaction, 'getMeta')) {
-            $purchaseId = $transaction->getMeta('_chip_purchase_id');
-            if ($purchaseId) {
-                return $purchaseId;
-            }
-        } elseif (method_exists($transaction, 'meta')) {
-            $meta = $transaction->meta();
-            if (isset($meta['_chip_purchase_id'])) {
-                return $meta['_chip_purchase_id'];
-            }
-        } elseif (property_exists($transaction, 'id') && $transaction->id) {
-            // Fallback to WordPress post meta if transaction has an ID
-            $purchaseId = get_post_meta($transaction->id, '_chip_purchase_id', true);
-            if ($purchaseId) {
-                return $purchaseId;
-            }
-        } elseif (property_exists($transaction, 'chip_purchase_id')) {
-            return $transaction->chip_purchase_id;
+        // Get order ID from transaction
+        if (!property_exists($transaction, 'order_id') || !$transaction->order_id) {
+            return null;
         }
 
-        // Fallback: try to get from order metadata
-        if (property_exists($transaction, 'order_id') && $transaction->order_id) {
-            $order = OrderResource::getQuery()->find($transaction->order_id);
-            if ($order && property_exists($transaction, 'uuid')) {
-                $metaKey = '_chip_purchase_id_' . $transaction->uuid;
-                if (method_exists($order, 'getMeta')) {
-                    $purchaseId = $order->getMeta($metaKey);
-                    if ($purchaseId) {
-                        return $purchaseId;
-                    }
-                } elseif (method_exists($order, 'meta')) {
-                    $meta = $order->meta();
-                    if (isset($meta[$metaKey])) {
-                        return $meta[$metaKey];
-                    }
-                } elseif (property_exists($order, 'id') && $order->id) {
-                    $purchaseId = get_post_meta($order->id, $metaKey, true);
-                    if ($purchaseId) {
-                        return $purchaseId;
-                    }
-                }
-            }
-        }
+        $orderId = $transaction->order_id;
+        $metaKey = '_chip_purchase_id';
 
-        return null;
+        // Query using OrderMeta model
+        $orderMeta = OrderMeta::where('order_id', $orderId)
+            ->where('meta_key', $metaKey)
+            ->first();
+
+        // The model automatically handles JSON decoding via getMetaValueAttribute accessor
+        return $orderMeta ? $orderMeta->meta_value : null;
     }
 
     /**
