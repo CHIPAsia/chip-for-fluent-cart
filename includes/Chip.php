@@ -17,7 +17,6 @@ use FluentCart\App\Services\Payments\PaymentInstance;
 use FluentCart\App\Vite;
 use FluentCart\Framework\Support\Arr;
 
-
 class Chip extends AbstractPaymentGateway
 {
     public array $supportedFeatures = [
@@ -39,11 +38,10 @@ class Chip extends AbstractPaymentGateway
 
     public function boot()
     {
-        add_action('fluent_cart/payment_paid', [$this, 'handlePaymentPaid'], 10, 1);
-        
+        add_action( 'fluent_cart/payment_paid', array( $this, 'handlePaymentPaid' ), 10, 1 );
 
-        // Register settings filter
-        add_filter('fluent_cart/payment_methods/chip_settings', [$this, 'getSettings']);
+        // Register settings filter.
+        add_filter( 'fluent_cart/payment_methods/chip_settings', array( $this, 'getSettings' ) );
     }
 
     public function meta(): array
@@ -53,11 +51,11 @@ class Chip extends AbstractPaymentGateway
             'route' => 'chip',
             'slug' => 'chip',
             'description' => esc_html__('CHIP - Pay securely with CHIP Collect. Accept FPX, Cards, E-Wallet, Duitnow QR.', 'chip-for-fluentcart'),
-            'logo' => plugin_dir_url( dirname( __FILE__ ) ) . 'assets/logo.svg',
-            'icon' => plugin_dir_url( dirname( __FILE__ ) ) . 'assets/logo.svg',
+            'logo' => plugin_dir_url( __DIR__ ) . 'assets/logo.svg',
+            'icon' => plugin_dir_url( __DIR__ ) . 'assets/logo.svg',
             'brand_color' => '#136196',
             'upcoming' => false,
-            'status' => $this->settings->get('is_active') === 'yes',
+            'status' => 'yes' === $this->settings->get('is_active'),
             'supported_features' => $this->supportedFeatures,
         ];
     }
@@ -181,44 +179,47 @@ class Chip extends AbstractPaymentGateway
      */
     public function handleInitRedirect()
     {
-        // Check if this is a redirect request
-        if (!isset($_GET[self::REDIRECT_KEY])) {
+        // Check if this is a redirect request.
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This is a redirect callback from payment gateway.
+        if ( ! isset( $_GET[ self::REDIRECT_KEY ] ) ) {
             return;
         }
 
-        // Verify passphrase
-        $passphrase = get_option(self::REDIRECT_PASSPHRASE_OPTION, false);
-        if (!$passphrase) {
+        // Verify passphrase.
+        $passphrase = get_option( self::REDIRECT_PASSPHRASE_OPTION, false );
+        if ( ! $passphrase ) {
             return;
         }
 
-        if ($_GET[self::REDIRECT_KEY] !== $passphrase) {
-            status_header(403);
-            exit(__('Invalid redirect passphrase', 'chip-for-fluentcart'));
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This is a redirect callback from payment gateway.
+        if ( $passphrase !== sanitize_text_field( wp_unslash( $_GET[ self::REDIRECT_KEY ] ) ) ) {
+            status_header( 403 );
+            exit( esc_html__( 'Invalid redirect passphrase', 'chip-for-fluentcart' ) );
         }
 
-        // Get transaction UUID from URL
-        $transactionUuid = isset($_GET['transaction_uuid']) ? sanitize_text_field($_GET['transaction_uuid']) : '';
+        // Get transaction UUID from URL.
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This is a redirect callback from payment gateway.
+        $transactionUuid = isset( $_GET['transaction_uuid'] ) ? sanitize_text_field( wp_unslash( $_GET['transaction_uuid'] ) ) : '';
         
-        if (empty($transactionUuid)) {
-            status_header(400);
-            exit(__('Invalid transaction UUID', 'chip-for-fluentcart'));
+        if ( empty( $transactionUuid ) ) {
+            status_header( 400 );
+            exit( esc_html__( 'Invalid transaction UUID', 'chip-for-fluentcart' ) );
         }
 
         // Get order transaction by UUID using OrderTransaction model
         $orderTransaction = OrderTransaction::where('uuid', $transactionUuid)->first();
         
-        if (!$orderTransaction) {
-            status_header(404);
-            exit(__('Transaction not found', 'chip-for-fluentcart'));
+        if ( ! $orderTransaction ) {
+            status_header( 404 );
+            exit( esc_html__( 'Transaction not found', 'chip-for-fluentcart' ) );
         }
 
         // Get order from transaction
         $order = OrderResource::getQuery()->find($orderTransaction->order_id);
         
-        if (!$order) {
-            status_header(404);
-            exit(__('Order not found', 'chip-for-fluentcart'));
+        if ( ! $order ) {
+            status_header( 404 );
+            exit( esc_html__( 'Order not found', 'chip-for-fluentcart' ) );
         }
 
         // Small delay to allow webhook to process payment status update
@@ -230,8 +231,8 @@ class Chip extends AbstractPaymentGateway
 
         // Check if order status indicates payment is completed
         // Order is considered paid if status is PROCESSING or COMPLETED
-        $paidStatuses = [Status::ORDER_PROCESSING, Status::ORDER_COMPLETED];
-        $isPaid = in_array($order->status, $paidStatuses);
+        $paidStatuses = array( Status::ORDER_PROCESSING, Status::ORDER_COMPLETED );
+        $isPaid       = in_array( $order->status, $paidStatuses, true );
 
         if ($isPaid) {
             // Order has been paid (possibly updated by webhook), redirect to success URL
@@ -246,7 +247,7 @@ class Chip extends AbstractPaymentGateway
                 // Call API to check latest payment status
                 $paymentStatus = $this->checkPaymentStatus($purchaseId);
                 
-                if ($paymentStatus === 'paid') {
+                if ( 'paid' === $paymentStatus ) {
                     // Payment is actually paid, sync order status
                     $orderTransaction->fill([
                         'status' => Status::TRANSACTION_SUCCEEDED,
@@ -282,7 +283,7 @@ class Chip extends AbstractPaymentGateway
         try {
             // Validate settings
             $settings = $this->settings->get();
-            if ($settings['is_active'] !== 'yes') {
+            if ( 'yes' !== $settings['is_active'] ) {
                 return [
                     'success' => false,
                     'error_message' => __('CHIP payment is not activated', 'chip-for-fluentcart')
@@ -430,7 +431,7 @@ class Chip extends AbstractPaymentGateway
             $response = $chipApi->create_payment($chipParams);
 
             // Check for errors
-            if ($response === null) {
+            if ( null === $response ) {
                 return [
                     'success' => false,
                     'error_message' => __('Failed to create payment. Please try again.', 'chip-for-fluentcart')
@@ -439,9 +440,12 @@ class Chip extends AbstractPaymentGateway
 
             // Check for __all__ error key
             if (isset($response['__all__']) && is_array($response['__all__'])) {
-                $errorMessages = array_filter($response['__all__'], function($error) {
-                    return !empty($error);
-                });
+                $errorMessages = array_filter(
+                    $response['__all__'],
+                    function ( $error ) {
+                        return ! empty( $error );
+                    }
+                );
                 
                 if (!empty($errorMessages)) {
                     return [
@@ -488,8 +492,8 @@ class Chip extends AbstractPaymentGateway
         $fulfillmentType = Arr::get($params, 'order.fulfillment_type');
         $paymentMethod = Arr::get($params, 'order.payment_method');
 
-        //if new status is processing and payment_method is chip and fulfillment_type is digital then make it completed
-        if ($orderStatus === Status::ORDER_PROCESSING && $paymentMethod === 'chip' && $fulfillmentType === 'digital') {
+        // If new status is processing and payment_method is chip and fulfillment_type is digital then make it completed.
+        if ( Status::ORDER_PROCESSING === $orderStatus && 'chip' === $paymentMethod && 'digital' === $fulfillmentType ) {
             $order->status = Status::ORDER_COMPLETED;
             $order->completed_at = DateTime::gmtNow();
             $order->save();
@@ -499,11 +503,11 @@ class Chip extends AbstractPaymentGateway
                 'content' => sprintf(__('Order status has been updated from %s to %s', 'chip-for-fluentcart'), $orderStatus, $order->status)
             ];
 
-            (new OrderStatusUpdated($order, $orderStatus, 'completed', true,  $actionActivity, 'order_status'))->dispatch();
+            ( new OrderStatusUpdated( $order, $orderStatus, 'completed', true, $actionActivity, 'order_status' ) )->dispatch();
 
             $this->maybeUpdateSubscription($params);
 
-        } else if($orderStatus === Status::ORDER_PROCESSING && $paymentMethod === 'chip' && $fulfillmentType === 'physical') {
+        } elseif ( Status::ORDER_PROCESSING === $orderStatus && 'chip' === $paymentMethod && 'physical' === $fulfillmentType ) {
             $this->maybeUpdateSubscription($params);
         }
 
@@ -520,7 +524,7 @@ class Chip extends AbstractPaymentGateway
             return;
         }
 
-        if (!in_array($orderStatus, [Status::ORDER_PROCESSING, Status::ORDER_COMPLETED])) {
+        if ( ! in_array( $orderStatus, array( Status::ORDER_PROCESSING, Status::ORDER_COMPLETED ), true ) ) {
             return;
         }
 
@@ -529,7 +533,7 @@ class Chip extends AbstractPaymentGateway
 
         // update subscription status
         foreach ($subscriptions as $subscription) {
-            if ($subscription->status === 'active') {
+            if ( 'active' === $subscription->status ) {
                 continue;
             }
             $subscription->status = 'active';
@@ -542,7 +546,7 @@ class Chip extends AbstractPaymentGateway
         return [
             [
                 'handle' => 'fluent-cart-checkout-handler-chip',
-                'src' => plugin_dir_url( dirname( __FILE__ ) ) . 'public/js/chip-checkout.js',
+                'src' => plugin_dir_url( __DIR__ ) . 'public/js/chip-checkout.js',
                 'version' => CHIP_FOR_FLUENTCART_VERSION,
             ]
         ];
@@ -723,10 +727,10 @@ class Chip extends AbstractPaymentGateway
         }
 
         // Check refund status
-        $status = $refunded['status'] ?? '';
-        $acceptedStatus = ['success', 'refunded'];
+        $status          = $refunded['status'] ?? '';
+        $acceptedStatus  = array( 'success', 'refunded' );
 
-        if (!in_array($status, $acceptedStatus)) {
+        if ( ! in_array( $status, $acceptedStatus, true ) ) {
             return new \WP_Error(
                 'fluent_cart_chip_refund_error',
                 __('Refund could not be processed in CHIP. Please check your CHIP account.', 'chip-for-fluentcart')
@@ -772,13 +776,14 @@ class Chip extends AbstractPaymentGateway
         $settings = $this->settings->get();
         $configuredBrandId = $settings['brand_id'] ?? '';
         
-        if ($webhookBrandId !== $configuredBrandId) {
+        if ( $configuredBrandId !== $webhookBrandId ) {
             http_response_code(400);
             exit('Brand ID mismatch');
         }
 
-        // Get signature from headers
-        $signature = isset($_SERVER['HTTP_X_SIGNATURE']) ? $_SERVER['HTTP_X_SIGNATURE'] : '';
+        // Get signature from headers.
+        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Signature must remain intact for verification.
+        $signature = isset( $_SERVER['HTTP_X_SIGNATURE'] ) ? wp_unslash( $_SERVER['HTTP_X_SIGNATURE'] ) : '';
         
         if (empty($signature)) {
             http_response_code(400);
@@ -866,7 +871,7 @@ class Chip extends AbstractPaymentGateway
         // Decode base64 signature
         $decodedSignature = base64_decode($signature);
         
-        if ($decodedSignature === false) {
+        if ( false === $decodedSignature ) {
             return false;
         }
 
@@ -878,7 +883,7 @@ class Chip extends AbstractPaymentGateway
             OPENSSL_ALGO_SHA256
         );
 
-        return $result === 1;
+        return 1 === $result;
     }
 
     /**
@@ -899,13 +904,13 @@ class Chip extends AbstractPaymentGateway
         $paymentStatus = $webhookData['status'] ?? '';
         $orderUuid = $webhookData['reference'] ?? '';
 
-        // Only process paid/settled events
-        if (!in_array($eventType, ['purchase.paid', 'purchase.settled'])) {
+        // Only process paid/settled events.
+        if ( ! in_array( $eventType, array( 'purchase.paid', 'purchase.settled' ), true ) ) {
             return;
         }
 
         // Check payment status
-        if ($paymentStatus !== 'paid') {
+        if ( 'paid' !== $paymentStatus ) {
             return;
         }
 
@@ -929,9 +934,9 @@ class Chip extends AbstractPaymentGateway
             return;
         }
 
-        // Check if already processed (order already in paid status)
-        $paidStatuses = [Status::ORDER_PROCESSING, Status::ORDER_COMPLETED];
-        if (in_array($order->status, $paidStatuses)) {
+        // Check if already processed (order already in paid status).
+        $paidStatuses = array( Status::ORDER_PROCESSING, Status::ORDER_COMPLETED );
+        if ( in_array( $order->status, $paidStatuses, true ) ) {
             return;
         }
 
@@ -983,16 +988,16 @@ class Chip extends AbstractPaymentGateway
         $metaKey = 'chip_purchase_id';
         $metaValue = sanitize_text_field($purchaseId);
 
-        // Use updateOrCreate to update existing or create new record
-        // Timestamps (created_at, updated_at) are handled automatically by the model
-        $a = OrderMeta::query()->updateOrCreate(
-            [
-                'order_id' => $orderId,
-                'meta_key' => $metaKey
-            ],
-            [
-                'meta_value' => $metaValue
-            ]
+        // Use updateOrCreate to update existing or create new record.
+        // Timestamps (created_at, updated_at) are handled automatically by the model.
+        OrderMeta::query()->updateOrCreate(
+            array(
+                'order_id'  => $orderId,
+                'meta_key'  => $metaKey,
+            ),
+            array(
+                'meta_value' => $metaValue,
+            )
         );
     }
 
