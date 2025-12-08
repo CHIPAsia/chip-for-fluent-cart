@@ -18,35 +18,6 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-
-/**
- * Currently plugin version.
- * Start at version 1.0.0 and use SemVer - https://semver.org
- * Rename this for your plugin and update it as you release new versions.
- */
-define( 'CHIP_FOR_FLUENTCART_VERSION', '1.0.0' );
-
-/**
- * The code that runs during plugin activation.
- * This action is documented in includes/class-chip-for-fluentcart-activator.php
- */
-function activate_chip_for_fluentcart() {
-	require_once plugin_dir_path( __FILE__ ) . 'includes/class-chip-for-fluentcart-activator.php';
-	Chip_For_Fluentcart_Activator::activate();
-}
-
-/**
- * The code that runs during plugin deactivation.
- * This action is documented in includes/class-chip-for-fluentcart-deactivator.php
- */
-function deactivate_chip_for_fluentcart() {
-	require_once plugin_dir_path( __FILE__ ) . 'includes/class-chip-for-fluentcart-deactivator.php';
-	Chip_For_Fluentcart_Deactivator::deactivate();
-}
-
-register_activation_hook( __FILE__, 'activate_chip_for_fluentcart' );
-register_deactivation_hook( __FILE__, 'deactivate_chip_for_fluentcart' );
-
 /**
  * Register CHIP payment gateway with FluentCart
  */
@@ -60,7 +31,6 @@ add_action('fluent_cart/register_payment_methods', function($app) {
 	require_once plugin_dir_path( __FILE__ ) . 'includes/ChipLogger.php';
 	require_once plugin_dir_path( __FILE__ ) . 'includes/ChipFluentCartApi.php';
 	require_once plugin_dir_path( __FILE__ ) . 'includes/Chip.php';
-	require_once plugin_dir_path( __FILE__ ) . 'includes/ChipHandler.php';
 	require_once plugin_dir_path( __FILE__ ) . 'includes/ChipSettingsBase.php';
 
 	// Create and register your custom gateway

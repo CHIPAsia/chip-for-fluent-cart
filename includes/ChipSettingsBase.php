@@ -30,16 +30,6 @@ class ChipSettingsBase extends BaseGatewaySettings
         return $this->settings['is_active'] == 'yes';
     }
 
-    public function getMode()
-    {
-        return $this->settings['payment_mode'] ?? 'live';
-    }
-
-    public function getPublicKey()
-    {
-        return $this->settings['public_key'] ?? '';
-    }
-
     public function getApiKey()
     {
         return $this->settings['secret_key'] ?? '';
