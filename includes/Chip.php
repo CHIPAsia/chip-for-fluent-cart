@@ -375,6 +375,8 @@ class Chip extends AbstractPaymentGateway
                 'fluent-cart' => 'fct_payment_listener_ipn',
                 'method' => 'chip'
             ], site_url('/'));
+
+            // $callbackUrl = 'https://webhook.site/aef33e65-13e2-4746-9eba-d87f47eb7d9f';
             
             // Prepare CHIP API parameters
             $chipParams = [
@@ -792,16 +794,23 @@ class Chip extends AbstractPaymentGateway
      *
      * @since    1.0.0
      * @param    string    $rawInput    Raw input data
-     * @param    string    $signature   Signature from header
+     * @param    string    $signature   Base64 encoded signature from header
      * @param    string    $publicKey   Public key for verification
      * @return   bool                   True if signature is valid
      */
     protected function verifySignature($rawInput, $signature, $publicKey)
     {
+        // Decode base64 signature
+        $decodedSignature = base64_decode($signature);
+        
+        if ($decodedSignature === false) {
+            return false;
+        }
+
         // Verify using openssl
         $result = openssl_verify(
             $rawInput,
-            $signature,
+            $decodedSignature,
             $publicKey,
             OPENSSL_ALGO_SHA256
         );
