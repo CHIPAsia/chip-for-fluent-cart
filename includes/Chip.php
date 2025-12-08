@@ -317,16 +317,16 @@ class Chip extends AbstractPaymentGateway
                     $productPrice = 0;
                     $productQty = 1;
 
-                    // Handle different item structures
+                    // Handle different item structures (values already in cents from FluentCart)
                     if (is_object($item)) {
                         $productName = $item->item_name ?? $item->title ?? $item->name ?? '';
                         // Get unit price (if line_total exists, divide by quantity to get unit price)
                         if (isset($item->line_total) && isset($item->quantity)) {
-                            $productPrice = (int) (($item->line_total / $item->quantity) * 100);
+                            $productPrice = (int) ($item->line_total / $item->quantity);
                         } elseif (isset($item->line_total) && isset($item->qty)) {
-                            $productPrice = (int) (($item->line_total / $item->qty) * 100);
+                            $productPrice = (int) ($item->line_total / $item->qty);
                         } elseif (isset($item->price)) {
-                            $productPrice = (int) ($item->price * 100);
+                            $productPrice = (int) $item->price;
                         } else {
                             $productPrice = 0;
                         }
@@ -335,11 +335,11 @@ class Chip extends AbstractPaymentGateway
                         $productName = $item['item_name'] ?? $item['title'] ?? $item['name'] ?? '';
                         // Get unit price (if line_total exists, divide by quantity to get unit price)
                         if (isset($item['line_total']) && isset($item['quantity'])) {
-                            $productPrice = (int) (($item['line_total'] / $item['quantity']) * 100);
+                            $productPrice = (int) ($item['line_total'] / $item['quantity']);
                         } elseif (isset($item['line_total']) && isset($item['qty'])) {
-                            $productPrice = (int) (($item['line_total'] / $item['qty']) * 100);
+                            $productPrice = (int) ($item['line_total'] / $item['qty']);
                         } elseif (isset($item['price'])) {
-                            $productPrice = (int) ($item['price'] * 100);
+                            $productPrice = (int) $item['price'];
                         } else {
                             $productPrice = 0;
                         }
@@ -356,11 +356,11 @@ class Chip extends AbstractPaymentGateway
                 }
             }
 
-            // If no products found, create a default product entry
+            // If no products found, create a default product entry (amount already in cents)
             if (empty($products)) {
                 $products[] = [
                     'name' => __('Order', 'chip-for-fluentcart') . ' #' . $paymentData['order_id'],
-                    'price' => (int) ($paymentData['amount'] * 100),
+                    'price' => (int) $paymentData['amount'],
                     'qty' => 1
                 ];
             }
@@ -379,10 +379,10 @@ class Chip extends AbstractPaymentGateway
 
             // $callbackUrl = 'https://webhook.site/aef33e65-13e2-4746-9eba-d87f47eb7d9f';
             
-            // Prepare CHIP API parameters
+            // Prepare CHIP API parameters (amount already in cents from FluentCart)
             $chipParams = [
                 'brand_id' => $brandId,
-                'total_override' => (int) ($paymentData['amount'] * 100),
+                'total_override' => (int) $paymentData['amount'],
                 'reference' => $paymentData['order_id'],
                 'success_redirect' => $initUrl,
                 'success_callback' => $callbackUrl,
@@ -706,8 +706,8 @@ class Chip extends AbstractPaymentGateway
         $debug = $this->settings->isDebugEnabled() ? 'yes' : 'no';
         $chipApi = new ChipFluentCartApi($secretKey, $brandId, $logger, $debug);
 
-        // Prepare refund amount (convert to smallest currency unit - cents)
-        $refundAmount = (int) ($amount * 100);
+        // Refund amount (already in cents from FluentCart)
+        $refundAmount = (int) $amount;
 
         // Prepare refund data
         $refundData = [
