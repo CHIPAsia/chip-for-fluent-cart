@@ -389,7 +389,7 @@ class Chip extends AbstractPaymentGateway
                 'cancel_redirect' => $paymentData['cancel_url'],
                 'send_receipt' => false,
                 'creator_agent' => 'FluentCart v' . FLUENTCART_VERSION,
-                // TODO: Add creator agent
+                // TODO: Add platform
                 // 'platform' => 'fluentcart',
                 'purchase' => [
                     'currency' => $paymentData['currency'],
