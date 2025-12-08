@@ -19,6 +19,11 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 /**
+ * Define plugin version
+ */
+define( 'CHIP_FOR_FLUENTCART_VERSION', '1.0.0' );
+
+/**
  * Register CHIP payment gateway with FluentCart
  */
 add_action('fluent_cart/register_payment_methods', function($app) {
