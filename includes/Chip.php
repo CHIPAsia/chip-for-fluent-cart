@@ -24,8 +24,6 @@ class Chip extends AbstractPaymentGateway
         'payment',
         'refund',
         'webhook',
-        // TODO: Add subscription support
-        // 'subscription'
     ];
 
     public BaseGatewaySettings $settings;
