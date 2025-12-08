@@ -817,91 +817,61 @@ class Chip extends AbstractPaymentGateway
      */
     protected function processWebhook($webhookData)
     {
-        // TODO: Implement webhook processing logic
-        // This should handle different webhook events from CHIP (payment.success, payment.failed, etc.)
-        
         if (empty($webhookData)) {
             return;
         }
 
         // Extract relevant data from webhook
         $eventType = $webhookData['event_type'] ?? '';
-        $orderId = $paymentData['order_id'] ?? $paymentData['reference'] ?? '';
+        $purchaseId = $webhookData['id'] ?? '';
+        $paymentStatus = $webhookData['status'] ?? '';
+        $orderUuid = $webhookData['reference'] ?? '';
 
-        // Get order from webhook data
-        $order = $this->getOrderFromWebhook($orderId);
+        // Only process paid/settled events
+        if (!in_array($eventType, ['purchase.paid', 'purchase.settled'])) {
+            return;
+        }
+
+        // Check payment status
+        if ($paymentStatus !== 'paid') {
+            return;
+        }
+
+        if (empty($orderUuid)) {
+            return;
+        }
+
+        // Get order by UUID (reference)
+        $order = Order::where('uuid', $orderUuid)->first();
         
         if (!$order) {
             return;
         }
 
-        // Process based on event type
-        switch ($eventType) {
-            case 'purchase.paid':
-            case 'purchase.settled':
-                $this->updateOrderStatus($order, Status::ORDER_PROCESSING);
-                break;
-            default:
-                // Log unknown event type
-                break;
-        }
-    }
-
-
-    /**
-     * Get order from webhook data
-     *
-     * @since    1.0.0
-     * @param    string    $orderId    Order ID or UUID
-     * @return   object|null            Order object or null if not found
-     */
-    protected function getOrderFromWebhook($orderId)
-    {
-        if (empty($orderId)) {
-            return null;
-        }
-
-        // Try to find by UUID first
-        $order = Order::where('uuid', $orderId)->first();
+        // Get order transaction
+        $orderTransaction = OrderTransaction::where('order_id', $order->id)
+            ->where('payment_method', 'chip')
+            ->first();
         
-        // If not found by UUID, try by ID
-        if (!$order && is_numeric($orderId)) {
-            $order = OrderResource::getQuery()->find($orderId);
-        }
-
-        return $order;
-    }
-
-    /**
-     * Update order status
-     *
-     * @since    1.0.0
-     * @param    object    $order    Order object
-     * @param    string    $status   New status
-     */
-    protected function updateOrderStatus($order, $status)
-    {
-        if (!$order) {
+        if (!$orderTransaction) {
             return;
         }
 
-        $oldStatus = $order->status;
-        $order->status = $status;
-        
-        // Set completed_at if status is completed
-        if ($status === Status::ORDER_COMPLETED) {
-            $order->completed_at = DateTime::gmtNow();
+        // Check if already processed (order already in paid status)
+        $paidStatuses = [Status::ORDER_PROCESSING, Status::ORDER_COMPLETED];
+        if (in_array($order->status, $paidStatuses)) {
+            return;
         }
-        
-        $order->save();
 
-        // Dispatch order status updated event
-        $actionActivity = [
-            'title'   => __('Order status updated', 'chip-for-fluentcart'),
-            'content' => sprintf(__('Order status has been updated from %s to %s via CHIP webhook', 'chip-for-fluentcart'), $oldStatus, $status)
-        ];
+        // Update transaction status
+        $orderTransaction->fill([
+            'status' => Status::TRANSACTION_SUCCEEDED,
+            'chip_purchase_id' => $purchaseId,
+        ]);
+        $orderTransaction->save();
 
-        (new OrderStatusUpdated($order, $oldStatus, $status, true, $actionActivity, 'order_status'))->dispatch();
+        // Sync order statuses using StatusHelper
+        (new StatusHelper($order))->syncOrderStatuses($orderTransaction);
     }
 
     public function getOrderInfo(array $data)
