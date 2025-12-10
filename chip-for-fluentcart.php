@@ -12,6 +12,8 @@
  * Domain Path: /languages
  * Reference: https://dev.fluentcart.com/modules/payment-methods
  * Reference: https://dev.fluentcart.com/payment-methods-integration/quick-implementation.html#step-4-create-javascript-file-for-frontend-checkout
+ * 
+ * Requires Plugins: fluent-cart
  */
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
