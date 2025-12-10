@@ -103,6 +103,11 @@ class Chip extends AbstractPaymentGateway
                 'order_id' => $order->uuid,
                 'customer_email' => $customer->email,
                 'customer_full_name' => $customerFullName,
+                'customer_country' => $customer->country,
+                'customer_city' => $customer->city,
+                'customer_zip_code' => $customer->postcode,
+                'customer_state' => $customer->state,
+                'customer_personal_code' => $customer->id,
                 'return_url' => $this->getReturnUrl($transaction),
                 'order_items' => $orderItems,
                 'cancel_url' => self::getCancelUrl($transaction),
@@ -413,6 +418,31 @@ class Chip extends AbstractPaymentGateway
                 // Add full name
                 if (!empty($paymentData['customer_full_name'])) {
                     $chipParams['client']['full_name'] = $paymentData['customer_full_name'];
+                }
+                
+                // Add country
+                if (!empty($paymentData['customer_country'])) {
+                    $chipParams['client']['country'] = $paymentData['customer_country'];
+                }
+                
+                // Add city
+                if (!empty($paymentData['customer_city'])) {
+                    $chipParams['client']['city'] = $paymentData['customer_city'];
+                }
+                
+                // Add zip code
+                if (!empty($paymentData['customer_zip_code'])) {
+                    $chipParams['client']['zip_code'] = $paymentData['customer_zip_code'];
+                }
+                
+                // Add state
+                if (!empty($paymentData['customer_state'])) {
+                    $chipParams['client']['state'] = $paymentData['customer_state'];
+                }
+                
+                // Add personal code (customer ID)
+                if (!empty($paymentData['customer_personal_code'])) {
+                    $chipParams['client']['personal_code'] = $paymentData['customer_personal_code'];
                 }
             }
 
