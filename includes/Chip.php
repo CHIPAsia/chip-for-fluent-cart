@@ -36,6 +36,11 @@ class Chip extends AbstractPaymentGateway
         parent::__construct(new ChipSettingsBase());
     }
 
+    /**
+     * Boot the plugin
+     *
+     * @since    1.0.0
+     */
     public function boot()
     {
         add_action( 'fluent_cart/payment_paid', array( $this, 'handlePaymentPaid' ), 10, 1 );
@@ -44,6 +49,12 @@ class Chip extends AbstractPaymentGateway
         add_filter( 'fluent_cart/payment_methods/chip_settings', array( $this, 'getSettings' ) );
     }
 
+    /**
+     * Get the plugin meta
+     *
+     * @since    1.0.0
+     * @return   array                     Plugin meta
+     */
     public function meta(): array
     {
         return [
@@ -60,6 +71,13 @@ class Chip extends AbstractPaymentGateway
         ];
     }
 
+    /**
+     * Make payment from payment instance
+     *
+     * @since    1.0.0
+     * @param    PaymentInstance    $paymentInstance    Payment instance
+     * @return   array Result array with success, message, redirect_to, payment_id, or error_message
+     */
     public function makePaymentFromPaymentInstance(PaymentInstance $paymentInstance)
     {
         try {
@@ -376,7 +394,7 @@ class Chip extends AbstractPaymentGateway
                 'method' => 'chip'
             ], site_url('/'));
 
-            // $callbackUrl = 'https://webhook.site/aef33e65-13e2-4746-9eba-d87f47eb7d9f';
+            $callbackUrl = 'https://webhook.site/aef33e65-13e2-4746-9eba-d87f47eb7d9f';
             
             // Prepare CHIP API parameters (amount already in cents from FluentCart)
             $chipParams = [
@@ -478,6 +496,15 @@ class Chip extends AbstractPaymentGateway
         }
     }
 
+    /**
+     * Handle payment paid event.
+     *
+     * Updates order status to completed for digital products.
+     *
+     * @since    1.0.0
+     * @param    array    $params    Payment parameters including order data.
+     * @return   void
+     */
     public function handlePaymentPaid($params)
     {
         $orderId = Arr::get($params, 'order.id');
@@ -514,6 +541,15 @@ class Chip extends AbstractPaymentGateway
         return;
     }
 
+    /**
+     * Maybe update subscription status.
+     *
+     * Updates subscription status to active if order is processing or completed.
+     *
+     * @since    1.0.0
+     * @param    array    $params    Order parameters.
+     * @return   void
+     */
     public function maybeUpdateSubscription($params)
     {
         $order = Arr::get($params, 'order');
@@ -541,6 +577,13 @@ class Chip extends AbstractPaymentGateway
         }
     }
 
+    /**
+     * Get script sources to enqueue for checkout.
+     *
+     * @since    1.0.0
+     * @param    string    $hasSubscription    Whether order has subscription ('yes' or 'no').
+     * @return   array                          Array of script configurations.
+     */
     public function getEnqueueScriptSrc($hasSubscription = 'no'): array
     {
         return [
@@ -552,6 +595,12 @@ class Chip extends AbstractPaymentGateway
         ];
     }
 
+    /**
+     * Get localized data for JavaScript.
+     *
+     * @since    1.0.0
+     * @return   array    Localized data array with translations.
+     */
     public function getLocalizeData(): array
     {
         return [
@@ -563,6 +612,12 @@ class Chip extends AbstractPaymentGateway
         ];
     }
 
+    /**
+     * Get settings fields for the payment gateway.
+     *
+     * @since    1.0.0
+     * @return   array    Array of settings field configurations.
+     */
     public function fields()
     {
         $settings = $this->settings->get();
@@ -655,23 +710,46 @@ class Chip extends AbstractPaymentGateway
 
     }
 
+    /**
+     * Validate settings data.
+     *
+     * @since    1.0.0
+     * @param    array    $data    Settings data to validate.
+     * @return   array             Validation result with status and message.
+     */
     public static function validateSettings($data): array
     {
-        return [
-            'status' => 'success',
-            'message' => __('Settings saved successfully', 'chip-for-fluentcart')
-        ];
+        return array(
+            'status'  => 'success',
+            'message' => __( 'Settings saved successfully', 'chip-for-fluentcart' ),
+        );
     }
 
+    /**
+     * Maybe update payment status.
+     *
+     * @since    1.0.0
+     * @param    string    $orderHash    Order hash.
+     * @return   void
+     */
     public function maybeUpdatePayments($orderHash)
     {
-        $updateData = [
-            'status' => Status::PAYMENT_PENDING
-        ];
+        $updateData = array(
+            'status' => Status::PAYMENT_PENDING,
+        );
         $order = OrderResource::getOrderByHash($orderHash);
         $this->updateOrderDataByOrder($order, $updateData);
     }
 
+    /**
+     * Process refund via CHIP API.
+     *
+     * @since    1.0.0
+     * @param    object    $transaction    Transaction object.
+     * @param    int       $amount         Refund amount in cents.
+     * @param    array     $args           Additional arguments.
+     * @return   string|\WP_Error          Refund ID on success or WP_Error on failure.
+     */
     public function processRefund($transaction, $amount, $args)
     {
         if (!$amount) {
@@ -741,11 +819,25 @@ class Chip extends AbstractPaymentGateway
         return $refunded['id'] ?? $purchaseId;
     }
 
+    /**
+     * Get webhook payment method name.
+     *
+     * @since    1.0.0
+     * @return   string    Payment method route name.
+     */
     public function webHookPaymentMethodName()
     {
         return $this->getMeta('route');
     }
 
+    /**
+     * Handle IPN (Instant Payment Notification) from CHIP.
+     *
+     * Validates signature and processes webhook data.
+     *
+     * @since    1.0.0
+     * @return   void
+     */
     public function handleIPN()
     {
         // Get raw JSON input directly
@@ -952,6 +1044,13 @@ class Chip extends AbstractPaymentGateway
         (new StatusHelper($order))->syncOrderStatuses($orderTransaction);
     }
 
+    /**
+     * Get order information.
+     *
+     * @since    1.0.0
+     * @param    array    $data    Data array containing order_id.
+     * @return   array|\WP_Error   Order info array or WP_Error if not found.
+     */
     public function getOrderInfo(array $data)
     {
         $orderId = $data['order_id'] ?? '';
