@@ -381,8 +381,6 @@ class Chip extends AbstractPaymentGateway
                 'fluent-cart' => 'fct_payment_listener_ipn',
                 'method' => 'chip'
             ], site_url('/'));
-
-            $callbackUrl = 'https://webhook.site/aef33e65-13e2-4746-9eba-d87f47eb7d9f';
             
             // Prepare CHIP API parameters (amount already in cents from FluentCart)
             $chipParams = [
