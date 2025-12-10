@@ -61,3 +61,19 @@ add_action('init', function() {
 		$chipGateway->handleInitRedirect();
 	}
 }, 100, 0);
+
+/**
+ * Add settings link on plugin page
+ */
+add_filter('plugin_action_links_' . plugin_basename(__FILE__), function($links) {
+	if (!function_exists('fluent_cart_api')) {
+		return $links;
+	}
+
+	$settings_url = \FluentCart\App\Services\URL::getDashboardUrl('settings/payments/chip');
+	$settings_link = '<a href="' . esc_url($settings_url) . '">' . esc_html__('Settings', 'chip-for-fluentcart') . '</a>';
+	
+	array_unshift($links, $settings_link);
+	
+	return $links;
+});
