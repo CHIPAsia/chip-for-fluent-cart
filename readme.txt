@@ -28,20 +28,15 @@ The plugins do includes support for Fluent Cart Subscription products.
 == Screenshots ==
 
 * Fill up the form with Brand ID and Secret Key. Toggle Active and Save Settings to activate.
-
 * Checkout and pay with CHIP
-
 * CHIP payment page
-
 * Fluent Cart order received page
-
 * Fluent Cart dashboard order page
-
 * Fluent Cart refund order
 
 == Changelog ==
 
-= 1.0.0 2025-12-06 =
+= 1.0.0 2025-12-30 =
 
 * Initial release
 
@@ -69,6 +64,17 @@ Manual installation method requires downloading the CHIP for Fluent Cart plugin 
 = Updating =
 
 Automatic updates should work smoothly, but we still recommend you back up your site.
+
+= Configuration =
+
+1. Navigate to **WordPress Dashboard** → **Plugins** → **CHIP for Fluent Cart** → **Settings**
+   Or: **WordPress Dashboard** → **FluentCart** → **Settings** → **Payment Settings** → **CHIP**
+
+2. Set your **Secret Key** and **Brand ID**. Optionally set **Email Fallback** and **Payment Method Whitelist**. Merchants should leave these options blank/unset to use default settings.
+
+3. Ensure Fluent Cart Checkout currency is set to **Malaysian Ringgit (MYR)**.
+
+4. Perform a test payment to verify the integration is working correctly.
 
 == Frequently Asked Questions ==
 
