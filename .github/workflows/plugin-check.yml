@@ -15,11 +15,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Prepare plugin directory (exclude hidden files)
+        run: |
+          mkdir -p ./build/chip-for-fluent-cart
+          # Copy only non-hidden files and directories
+          rsync -av --exclude='.*' --exclude='build' ./ ./build/chip-for-fluent-cart/
+          ls -la ./build/chip-for-fluent-cart/
+
       - name: Run Plugin Check
         uses: wordpress/plugin-check-action@v1
         with:
-          build-dir: './'
-          exclude-directories: 'vendor,node_modules,.git,.github'
+          build-dir: './build/chip-for-fluent-cart'
+          exclude-directories: 'vendor,node_modules'
 
   phpcs:
     name: PHP CodeSniffer (WordPress Standards)
