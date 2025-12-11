@@ -166,7 +166,7 @@ class Chip extends AbstractPaymentGateway
                 'customer_zip_code' => $customer->postcode,
                 'customer_state' => $customer->state,
                 'customer_personal_code' => $customer->id,
-                'customer_notes' => $customer->notes ?? '',
+                'customer_notes' => $order->note ?? '',
                 'return_url' => $this->getReturnUrl($transaction),
                 'order_items' => $orderItems,
                 'cancel_url' => self::getCancelUrl($transaction),
