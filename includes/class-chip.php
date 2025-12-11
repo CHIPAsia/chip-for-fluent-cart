@@ -42,7 +42,8 @@ class Chip extends AbstractPaymentGateway {
 	 *
 	 * @var array
 	 */
-	public array $supported_features = array(
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.PropertyNotSnakeCase -- Parent class uses camelCase.
+	public array $supportedFeatures = array(
 		'payment',
 		'refund',
 		'webhook',
@@ -134,7 +135,8 @@ class Chip extends AbstractPaymentGateway {
 			'brand_color'        => '#136196',
 			'upcoming'           => false,
 			'status'             => 'yes' === $this->settings->get( 'is_active' ),
-			'supported_features' => $this->supported_features,
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Parent class uses camelCase.
+			'supported_features' => $this->supportedFeatures,
 		);
 	}
 
