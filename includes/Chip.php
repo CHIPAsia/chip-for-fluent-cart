@@ -284,15 +284,15 @@ class Chip extends AbstractPaymentGateway
                 
                 if ($purchaseId) {
                     // Call API to check latest payment status
-                    $paymentStatus = $this->checkPaymentStatus($purchaseId);
+                    $paymentData = $this->checkPaymentStatus($purchaseId);
                     
-                    if ( 'paid' === $paymentStatus ) {
+                    if ( $paymentData && 'paid' === $paymentData['status'] ) {
                         // Payment is actually paid, sync order status
                         $orderTransaction->fill([
                             'status' => Status::TRANSACTION_SUCCEEDED,
                             'chip_purchase_id' => $purchaseId,
                             'vendor_charge_id' => $purchaseId,
-                            'payment_method_type' => 'CHIP',
+                            'payment_method_type' => $paymentData['payment_method_type'],
                         ]);
                         $orderTransaction->save();
                         (new StatusHelper($order))->syncOrderStatuses($orderTransaction);
@@ -1051,6 +1051,7 @@ class Chip extends AbstractPaymentGateway
         $purchaseId = $webhookData['id'] ?? '';
         $paymentStatus = $webhookData['status'] ?? '';
         $orderUuid = $webhookData['reference'] ?? '';
+        $paymentMethodType = $webhookData['transaction_data']['payment_method'] ?? '';
 
         // Only process paid/settled events.
         if ( ! in_array( $eventType, array( 'purchase.paid', 'purchase.settled' ), true ) ) {
@@ -1100,7 +1101,7 @@ class Chip extends AbstractPaymentGateway
                 'status' => Status::TRANSACTION_SUCCEEDED,
                 'chip_purchase_id' => $purchaseId,
                 'vendor_charge_id' => $purchaseId,
-                'payment_method_type' => 'CHIP',
+                'payment_method_type' => $paymentMethodType,
             ]);
             $orderTransaction->save();
 
@@ -1204,7 +1205,7 @@ class Chip extends AbstractPaymentGateway
      *
      * @since    1.0.0
      * @param    string    $purchaseId    CHIP purchase ID
-     * @return   string|null              Payment status ('paid', 'pending', 'failed', etc.) or null on error
+     * @return   array|null               Array with 'status' and 'payment_method_type', or null on error
      */
     protected function checkPaymentStatus($purchaseId)
     {
@@ -1227,11 +1228,14 @@ class Chip extends AbstractPaymentGateway
             $debug = $this->settings->isDebugEnabled() ? 'yes' : 'no';
             $chipApi = new ChipFluentCartApi($secretKey, $brandId, $logger, $debug);
 
-            // Get payment status from API
+            // Get payment from API
             $payment = $chipApi->get_payment($purchaseId);
 
             if ($payment && isset($payment['status'])) {
-                return $payment['status'];
+                return [
+                    'status' => $payment['status'],
+                    'payment_method_type' => $payment['transaction_data']['payment_method'] ?? '',
+                ];
             }
 
             return null;
