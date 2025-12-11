@@ -292,7 +292,7 @@ class Chip extends AbstractPaymentGateway
                             'status' => Status::TRANSACTION_SUCCEEDED,
                             'chip_purchase_id' => $purchaseId,
                             'vendor_charge_id' => $purchaseId,
-                            'payment_method_type' => $paymentData['payment_method_type'],
+                            'payment_method_type' => $this->mapPaymentMethodType($paymentData['payment_method_type']),
                         ]);
                         $orderTransaction->save();
                         (new StatusHelper($order))->syncOrderStatuses($orderTransaction);
@@ -1101,7 +1101,7 @@ class Chip extends AbstractPaymentGateway
                 'status' => Status::TRANSACTION_SUCCEEDED,
                 'chip_purchase_id' => $purchaseId,
                 'vendor_charge_id' => $purchaseId,
-                'payment_method_type' => $paymentMethodType,
+                'payment_method_type' => $this->mapPaymentMethodType($paymentMethodType),
             ]);
             $orderTransaction->save();
 
@@ -1329,6 +1329,25 @@ class Chip extends AbstractPaymentGateway
         }
         
         return false;
+    }
+
+    /**
+     * Map payment method type to display name
+     *
+     * @since    1.0.0
+     * @param    string    $paymentMethod    Raw payment method from CHIP API
+     * @return   string                      Mapped display name
+     */
+    protected function mapPaymentMethodType($paymentMethod)
+    {
+        $mapping = [
+            'razer_atome'     => 'Atome',
+            'razer_grabpay'   => 'GrabPay',
+            'razer_tng'       => 'TnG',
+            'razer_shopeepay' => 'ShopeePay',
+        ];
+
+        return $mapping[$paymentMethod] ?? $paymentMethod;
     }
 }
 
