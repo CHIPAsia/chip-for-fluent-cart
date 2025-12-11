@@ -1175,9 +1175,11 @@ class Chip extends AbstractPaymentGateway
         OrderMeta::query()->updateOrCreate(
             array(
                 'order_id'  => $orderId,
+                //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
                 'meta_key'  => $metaKey,
             ),
             array(
+                //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
                 'meta_value' => $metaValue,
             )
         );
@@ -1279,6 +1281,7 @@ class Chip extends AbstractPaymentGateway
             // PostgreSQL: Use advisory lock with numeric key
             // Convert order ID to integer for pg_advisory_lock
             $lockKey = abs(crc32('chip_payment_' . $orderId));
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Advisory lock requires direct query.
             $result = $wpdb->get_var(
                 $wpdb->prepare("SELECT pg_advisory_lock(%d)", $lockKey)
             );
@@ -1286,6 +1289,7 @@ class Chip extends AbstractPaymentGateway
         } else {
             // MySQL: Use named lock with timeout
             $lockName = 'chip_payment_' . $orderId;
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Named lock requires direct query.
             $result = $wpdb->get_var(
                 $wpdb->prepare("SELECT GET_LOCK(%s, %d)", $lockName, $timeout)
             );
@@ -1309,6 +1313,7 @@ class Chip extends AbstractPaymentGateway
         if ($this->isPostgreSQL()) {
             // PostgreSQL: Release advisory lock
             $lockKey = abs(crc32('chip_payment_' . $orderId));
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Advisory lock requires direct query.
             $result = $wpdb->get_var(
                 $wpdb->prepare("SELECT pg_advisory_unlock(%d)", $lockKey)
             );
@@ -1316,6 +1321,7 @@ class Chip extends AbstractPaymentGateway
         } else {
             // MySQL: Release named lock
             $lockName = 'chip_payment_' . $orderId;
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Named lock requires direct query.
             $result = $wpdb->get_var(
                 $wpdb->prepare("SELECT RELEASE_LOCK(%s)", $lockName)
             );
