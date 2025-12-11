@@ -40,12 +40,12 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.1'
-          tools: cs2pr, phpcs, phpcbf
 
       - name: Install WordPress Coding Standards
         run: |
           composer global config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
-          composer global require --dev dealerdirect/phpcodesniffer-composer-installer wp-coding-standards/wpcs:"^3.0"
+          composer global require --dev squizlabs/php_codesniffer dealerdirect/phpcodesniffer-composer-installer wp-coding-standards/wpcs:"^3.0"
+          echo "$(composer global config bin-dir --absolute)" >> $GITHUB_PATH
 
       - name: Verify PHPCS Standards
         run: |
@@ -53,7 +53,7 @@ jobs:
 
       - name: Run PHPCS
         run: |
-          phpcs --standard=WordPress --extensions=php --ignore=vendor,node_modules --report=checkstyle . | cs2pr
+          phpcs --standard=WordPress --extensions=php --ignore=vendor,node_modules .
         continue-on-error: false
 
   php-compatibility:
@@ -72,12 +72,12 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-version }}
-          tools: phpcs
 
       - name: Install PHPCompatibility
         run: |
           composer global config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
-          composer global require --dev dealerdirect/phpcodesniffer-composer-installer phpcompatibility/phpcompatibility-wp:"*"
+          composer global require --dev squizlabs/php_codesniffer dealerdirect/phpcodesniffer-composer-installer phpcompatibility/phpcompatibility-wp:"*"
+          echo "$(composer global config bin-dir --absolute)" >> $GITHUB_PATH
 
       - name: Verify PHPCS Standards
         run: |
