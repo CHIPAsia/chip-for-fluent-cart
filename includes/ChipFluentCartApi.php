@@ -169,12 +169,13 @@ class ChipFluentCartApi {
 	}
 
 	private function request( $method, $url, $params = [], $headers = [] ) {
-		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Debug logging only when enabled.
 		$this->log_info( sprintf(
 			'%s `%s`\n%s\n%s',
 			$method,
 			$url,
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Debug logging only when enabled.
 			print_r( $params, true ),
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Debug logging only when enabled.
 			print_r( $headers, true )
 		) );
 
