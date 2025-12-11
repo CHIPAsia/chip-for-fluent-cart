@@ -1,0 +1,79 @@
+name: WordPress Plugin Check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  plugin-check:
+    name: Plugin Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Plugin Check
+        uses: wordpress/plugin-check-action@v1
+        with:
+          build-dir: './'
+          exclude-directories: 'vendor,node_modules,.git,.github'
+
+  phpcs:
+    name: PHP CodeSniffer (WordPress Standards)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          tools: cs2pr, phpcs, phpcbf
+
+      - name: Install WordPress Coding Standards
+        run: |
+          # Install WordPress Coding Standards
+          composer global config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
+          composer global require --dev wp-coding-standards/wpcs:"^3.0" phpcompatibility/phpcompatibility-wp:"*"
+          
+          # Set installed paths
+          phpcs --config-set installed_paths $(composer global config vendor-dir)/wp-coding-standards/wpcs,$(composer global config vendor-dir)/phpcompatibility/php-compatibility,$(composer global config vendor-dir)/phpcompatibility/phpcompatibility-paragonie,$(composer global config vendor-dir)/phpcompatibility/phpcompatibility-wp
+
+      - name: Run PHPCS
+        run: |
+          phpcs --standard=WordPress --extensions=php --ignore=vendor,node_modules --report=checkstyle . | cs2pr
+        continue-on-error: true
+
+  php-compatibility:
+    name: PHP ${{ matrix.php-version }} Compatibility
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ['7.4', '8.0', '8.1', '8.2', '8.3', '8.4']
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP ${{ matrix.php-version }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          tools: phpcs
+
+      - name: Install PHPCompatibility
+        run: |
+          composer global config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
+          composer global require --dev phpcompatibility/phpcompatibility-wp:"*"
+          phpcs --config-set installed_paths $(composer global config vendor-dir)/phpcompatibility/php-compatibility,$(composer global config vendor-dir)/phpcompatibility/phpcompatibility-paragonie,$(composer global config vendor-dir)/phpcompatibility/phpcompatibility-wp
+
+      - name: Check PHP ${{ matrix.php-version }} Compatibility
+        run: |
+          phpcs --standard=PHPCompatibilityWP --runtime-set testVersion ${{ matrix.php-version }} --extensions=php --ignore=vendor,node_modules .
+
