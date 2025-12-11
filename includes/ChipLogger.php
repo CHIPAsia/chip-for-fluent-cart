@@ -1,6 +1,17 @@
 <?php
+/**
+ * CHIP Logger for FluentCart
+ *
+ * @package    Chip_For_Fluentcart
+ * @subpackage Chip_For_Fluentcart/includes
+ */
 
 namespace FluentCart\App\Modules\PaymentMethods\Chip;
+
+// Prevent direct file access.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 class ChipLogger {
 	

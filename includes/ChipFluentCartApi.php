@@ -1,6 +1,17 @@
 <?php
+/**
+ * CHIP API wrapper for FluentCart
+ *
+ * @package    Chip_For_Fluentcart
+ * @subpackage Chip_For_Fluentcart/includes
+ */
 
 namespace FluentCart\App\Modules\PaymentMethods\Chip;
+
+// Prevent direct file access.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 // This is CHIP API URL Endpoint as per documented in: https://docs.chip-in.asia
 if ( ! defined( 'CHIP_FOR_FLUENTCART_ROOT_URL' ) ) {

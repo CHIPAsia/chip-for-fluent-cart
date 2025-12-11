@@ -1,6 +1,17 @@
 <?php
+/**
+ * CHIP Payment Gateway for FluentCart
+ *
+ * @package    Chip_For_Fluentcart
+ * @subpackage Chip_For_Fluentcart/includes
+ */
 
 namespace FluentCart\App\Modules\PaymentMethods\Chip;
+
+// Prevent direct file access.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 use FluentCart\Api\Resource\OrderResource;
 use FluentCart\App\Events\Order\OrderStatusUpdated;
@@ -73,7 +84,7 @@ class Chip extends AbstractPaymentGateway
             return $url;
         }
         
-        return 'https://gate.chip-in.asia/p/' . $purchaseId . '/receipt/';
+        return 'https://gate.chip-in.asia/p/' . sanitize_text_field( $purchaseId ) . '/receipt/';
     }
 
     /**
@@ -896,7 +907,8 @@ class Chip extends AbstractPaymentGateway
      */
     public function handleIPN()
     {
-        // Get raw JSON input directly
+        // Get raw JSON input directly for webhook signature verification.
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading from php://input for webhook payload.
         $rawInput = file_get_contents('php://input');
         
         if (empty($rawInput)) {
@@ -1016,7 +1028,8 @@ class Chip extends AbstractPaymentGateway
      */
     protected function verifySignature($rawInput, $signature, $publicKey)
     {
-        // Decode base64 signature
+        // Decode base64 signature from X-Signature header for cryptographic verification.
+        // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Required for RSA signature verification.
         $decodedSignature = base64_decode($signature);
         
         if ( false === $decodedSignature ) {

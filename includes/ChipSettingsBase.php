@@ -1,8 +1,20 @@
 <?php
+/**
+ * CHIP Settings Base for FluentCart
+ *
+ * @package    Chip_For_Fluentcart
+ * @subpackage Chip_For_Fluentcart/includes
+ */
 
 namespace FluentCart\App\Modules\PaymentMethods\Chip;
+
 use FluentCart\Api\StoreSettings;
 use FluentCart\App\Modules\PaymentMethods\Core\BaseGatewaySettings;
+
+// Prevent direct file access.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 class ChipSettingsBase extends BaseGatewaySettings
 {
