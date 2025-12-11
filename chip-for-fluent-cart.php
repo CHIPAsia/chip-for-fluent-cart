@@ -5,7 +5,6 @@
  * Description: Integrate CHIP payment gateway with Fluent Cart for seamless payment processing.
  * Version: 1.0.0
  * Author: CHIP IN SDN. BHD.
- * Author URI: https://www.chip-in.asia
  * License: GPLv3
  * License URI: https://www.gnu.org/licenses/gpl-3.0.html
  * Text Domain: chip-for-fluent-cart
