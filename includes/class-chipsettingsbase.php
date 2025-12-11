@@ -37,8 +37,7 @@ class ChipSettingsBase extends BaseGatewaySettings {
 	 *
 	 * @var string
 	 */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.PropertyNotSnakeCase -- Parent class uses camelCase.
-	public $methodHandler = 'fluent_cart_payment_settings_chip';
+	public $methodHandler = 'fluent_cart_payment_settings_chip'; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.PropertyNotSnakeCase -- Parent class uses camelCase.
 
 	/**
 	 * Get default settings.

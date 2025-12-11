@@ -42,8 +42,7 @@ class Chip extends AbstractPaymentGateway {
 	 *
 	 * @var array
 	 */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.PropertyNotSnakeCase -- Parent class uses camelCase.
-	public array $supportedFeatures = array(
+	public array $supportedFeatures = array( // phpcs:ignore WordPress.NamingConventions.ValidVariableName.PropertyNotSnakeCase -- Parent class uses camelCase.
 		'payment',
 		'refund',
 		'webhook',
