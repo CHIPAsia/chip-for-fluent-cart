@@ -166,6 +166,7 @@ class Chip extends AbstractPaymentGateway
                 'customer_zip_code' => $customer->postcode,
                 'customer_state' => $customer->state,
                 'customer_personal_code' => $customer->id,
+                'customer_notes' => $customer->notes ?? '',
                 'return_url' => $this->getReturnUrl($transaction),
                 'order_items' => $orderItems,
                 'cancel_url' => self::getCancelUrl($transaction),
@@ -470,7 +471,8 @@ class Chip extends AbstractPaymentGateway
                 // 'platform' => 'fluentcart',
                 'purchase' => [
                     'currency' => $paymentData['currency'],
-                    'products' => $products
+                    'products' => $products,
+                    'notes' => !empty($paymentData['customer_notes']) ? mb_substr(trim($paymentData['customer_notes']), 0, 1000) : '',
                 ]
             ];
 
