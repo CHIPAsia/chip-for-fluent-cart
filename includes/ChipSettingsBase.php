@@ -16,70 +16,60 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-class ChipSettingsBase extends BaseGatewaySettings
-{
-
-    public $settings;
-    public $methodHandler = 'fluent_cart_payment_settings_chip';
+class ChipSettingsBase extends BaseGatewaySettings {
 
 
-    public static function getDefaults(): array
-    {
-        return [
-            'is_active'            => 'no',
-            'payment_mode'         => 'live',
-            'brand_id'             => '',
-            'secret_key'           => '',
-            'public_key'           => '',
-            'payment_method_whitelist' => [],
-            'email_fallback'       => '',
-            'debug'                => 'no',
-        ];
-    }
+	public $settings;
+	public $methodHandler = 'fluent_cart_payment_settings_chip';
 
-    public function isActive(): bool
-    {
-        return $this->settings['is_active'] == 'yes';
-    }
 
-    public function getMode()
-    {
-        return $this->settings['payment_mode'] ?? 'live';
-    }
+	public static function getDefaults(): array {
+		return array(
+			'is_active'                => 'no',
+			'payment_mode'             => 'live',
+			'brand_id'                 => '',
+			'secret_key'               => '',
+			'public_key'               => '',
+			'payment_method_whitelist' => array(),
+			'email_fallback'           => '',
+			'debug'                    => 'no',
+		);
+	}
 
-    public function getApiKey()
-    {
-        return $this->settings['secret_key'] ?? '';
-    }
+	public function isActive(): bool {
+		return $this->settings['is_active'] == 'yes';
+	}
 
-    public function getBrandId()
-    {
-        return $this->settings['brand_id'] ?? '';
-    }
+	public function getMode() {
+		return $this->settings['payment_mode'] ?? 'live';
+	}
 
-    public function getPaymentMethodWhitelist()
-    {
-        return $this->settings['payment_method_whitelist'] ?? [];
-    }
+	public function getApiKey() {
+		return $this->settings['secret_key'] ?? '';
+	}
 
-    public function getEmailFallback()
-    {
-        return $this->settings['email_fallback'] ?? '';
-    }
+	public function getBrandId() {
+		return $this->settings['brand_id'] ?? '';
+	}
 
-    public function isDebugEnabled()
-    {
-        return ($this->settings['debug'] ?? 'no') === 'yes';
-    }
+	public function getPaymentMethodWhitelist() {
+		return $this->settings['payment_method_whitelist'] ?? array();
+	}
 
-    public function get($key = '')
-    {
-        $settings = $this->settings;
+	public function getEmailFallback() {
+		return $this->settings['email_fallback'] ?? '';
+	}
 
-        if ($key && isset($this->settings[$key])) {
-            return $this->settings[$key];
-        }
-        return $settings;
-    }
+	public function isDebugEnabled() {
+		return ( $this->settings['debug'] ?? 'no' ) === 'yes';
+	}
+
+	public function get( $key = '' ) {
+		$settings = $this->settings;
+
+		if ( $key && isset( $this->settings[ $key ] ) ) {
+			return $this->settings[ $key ];
+		}
+		return $settings;
+	}
 }
-

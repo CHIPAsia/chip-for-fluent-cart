@@ -30,14 +30,14 @@ class ChipFluentCartApi {
 
 	public function __construct( $secret_key, $brand_id, $logger, $debug ) {
 		$this->secret_key = $secret_key;
-		$this->brand_id = $brand_id;
-		$this->logger = $logger;
-		$this->debug = $debug;
+		$this->brand_id   = $brand_id;
+		$this->logger     = $logger;
+		$this->debug      = $debug;
 	}
 
 	public function set_key( $secret_key, $brand_id ) {
 		$this->secret_key = $secret_key;
-		$this->brand_id = $brand_id;
+		$this->brand_id   = $brand_id;
 	}
 
 	public function create_payment( $params ) {
@@ -66,7 +66,7 @@ class ChipFluentCartApi {
 		return $this->call( 'POST', "/purchases/$purchase_id/delete_recurring_token/" );
 	}
 
-	public function capture_payment( $payment_id, $params = [] ) {
+	public function capture_payment( $payment_id, $params = array() ) {
 		$this->log_info( "capture payment: {$payment_id}" );
 		return $this->call( 'POST', "/purchases/{$payment_id}/capture/", $params );
 	}
@@ -98,7 +98,7 @@ class ChipFluentCartApi {
 	}
 
 	public function get_payment( $payment_id ) {
-		$this->log_info( sprintf( "get payment: %s", $payment_id ) );
+		$this->log_info( sprintf( 'get payment: %s', $payment_id ) );
 		// time() is to force fresh instead cache
 		$result = $this->call( 'GET', "/purchases/{$payment_id}/?time=" . time() );
 		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Debug logging only when enabled.
@@ -107,10 +107,10 @@ class ChipFluentCartApi {
 	}
 
 	public function refund_payment( $payment_id, $params ) {
-		$this->log_info( sprintf( "refunding payment: %s", $payment_id ) );
+		$this->log_info( sprintf( 'refunding payment: %s', $payment_id ) );
 		$result = $this->call( 'POST', "/purchases/{$payment_id}/refund/", $params );
 		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Debug logging only when enabled.
-		$this->log_info( sprintf( "payment refund result: %s", print_r( $result, true ) ) );
+		$this->log_info( sprintf( 'payment refund result: %s', print_r( $result, true ) ) );
 		return $result;
 	}
 
@@ -134,7 +134,7 @@ class ChipFluentCartApi {
 		return $result;
 	}
 
-	private function call( $method, $route, $params = [] ) {
+	private function call( $method, $route, $params = array() ) {
 		$secret_key = $this->secret_key;
 
 		if ( ! empty( $params ) ) {
@@ -145,10 +145,10 @@ class ChipFluentCartApi {
 			$method,
 			sprintf( '%s/v1%s', CHIP_FOR_FLUENTCART_ROOT_URL, $route ),
 			$params,
-			[ 
-				'Content-type' => 'application/json',
+			array(
+				'Content-type'  => 'application/json',
 				'Authorization' => "Bearer {$secret_key}",
-			]
+			)
 		);
 
 		$this->log_info( sprintf( 'received response: %s', $response ) );
@@ -168,24 +168,29 @@ class ChipFluentCartApi {
 		return $result;
 	}
 
-	private function request( $method, $url, $params = [], $headers = [] ) {
-		$this->log_info( sprintf(
-			'%s `%s`\n%s\n%s',
-			$method,
-			$url,
+	private function request( $method, $url, $params = array(), $headers = array() ) {
+		$this->log_info(
+			sprintf(
+				'%s `%s`\n%s\n%s',
+				$method,
+				$url,
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Debug logging only when enabled.
-			print_r( $params, true ),
+				print_r( $params, true ),
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Debug logging only when enabled.
-			print_r( $headers, true )
-		) );
+				print_r( $headers, true )
+			)
+		);
 
-		$wp_request = wp_remote_request( $url, array(
-			'method' => $method,
-			'sslverify' => ! defined( 'CHIP_FOR_FLUENTCART_SSLVERIFY_FALSE' ),
-			'headers' => $headers,
-			'body' => $params,
-			'timeout' => 10, // charge card require longer timeout
-		) );
+		$wp_request = wp_remote_request(
+			$url,
+			array(
+				'method'    => $method,
+				'sslverify' => ! defined( 'CHIP_FOR_FLUENTCART_SSLVERIFY_FALSE' ),
+				'headers'   => $headers,
+				'body'      => $params,
+				'timeout'   => 10, // charge card require longer timeout
+			)
+		);
 
 		$response = wp_remote_retrieve_body( $wp_request );
 
@@ -217,11 +222,10 @@ class ChipFluentCartApi {
 		if ( $this->debug !== 'yes' ) {
 			return;
 		}
-		$otherInfo = [];
+		$otherInfo = array();
 		if ( $error_data ) {
 			$otherInfo['error_data'] = $error_data;
 		}
 		$this->logger->log( $error_text, 'error', $otherInfo );
 	}
 }
-

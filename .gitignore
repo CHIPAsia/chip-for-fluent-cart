@@ -5,3 +5,5 @@ yarn.lock
 /node_modules/
 
 test_stub.php
+composer.lock
+vendor/
