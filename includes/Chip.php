@@ -292,7 +292,7 @@ class Chip extends AbstractPaymentGateway
                             'status' => Status::TRANSACTION_SUCCEEDED,
                             'chip_purchase_id' => $purchaseId,
                             'vendor_charge_id' => $purchaseId,
-                            'payment_method_type' => $this->mapPaymentMethodType($paymentData['payment_method_type']),
+                            'payment_method_type' => $this->mapPaymentMethodType($paymentData['payment_method_type'], $paymentData['transaction_data'] ?? []),
                         ]);
                         $orderTransaction->save();
                         (new StatusHelper($order))->syncOrderStatuses($orderTransaction);
@@ -1051,7 +1051,8 @@ class Chip extends AbstractPaymentGateway
         $purchaseId = $webhookData['id'] ?? '';
         $paymentStatus = $webhookData['status'] ?? '';
         $orderUuid = $webhookData['reference'] ?? '';
-        $paymentMethodType = $webhookData['transaction_data']['payment_method'] ?? '';
+        $transactionData = $webhookData['transaction_data'] ?? [];
+        $paymentMethodType = $transactionData['payment_method'] ?? '';
 
         // Only process paid/settled events.
         if ( ! in_array( $eventType, array( 'purchase.paid', 'purchase.settled' ), true ) ) {
@@ -1101,7 +1102,7 @@ class Chip extends AbstractPaymentGateway
                 'status' => Status::TRANSACTION_SUCCEEDED,
                 'chip_purchase_id' => $purchaseId,
                 'vendor_charge_id' => $purchaseId,
-                'payment_method_type' => $this->mapPaymentMethodType($paymentMethodType),
+                'payment_method_type' => $this->mapPaymentMethodType($paymentMethodType, $transactionData),
             ]);
             $orderTransaction->save();
 
@@ -1205,7 +1206,7 @@ class Chip extends AbstractPaymentGateway
      *
      * @since    1.0.0
      * @param    string    $purchaseId    CHIP purchase ID
-     * @return   array|null               Array with 'status' and 'payment_method_type', or null on error
+     * @return   array|null               Array with 'status', 'payment_method_type', and 'transaction_data', or null on error
      */
     protected function checkPaymentStatus($purchaseId)
     {
@@ -1232,9 +1233,11 @@ class Chip extends AbstractPaymentGateway
             $payment = $chipApi->get_payment($purchaseId);
 
             if ($payment && isset($payment['status'])) {
+                $transactionData = $payment['transaction_data'] ?? [];
                 return [
                     'status' => $payment['status'],
-                    'payment_method_type' => $payment['transaction_data']['payment_method'] ?? '',
+                    'payment_method_type' => $transactionData['payment_method'] ?? '',
+                    'transaction_data' => $transactionData,
                 ];
             }
 
@@ -1335,11 +1338,20 @@ class Chip extends AbstractPaymentGateway
      * Map payment method type to display name
      *
      * @since    1.0.0
-     * @param    string    $paymentMethod    Raw payment method from CHIP API
-     * @return   string                      Mapped display name
+     * @param    string    $paymentMethod     Raw payment method from CHIP API
+     * @param    array     $transactionData   Full transaction_data array (optional, needed for FPX)
+     * @return   string                       Mapped display name
      */
-    protected function mapPaymentMethodType($paymentMethod)
+    protected function mapPaymentMethodType($paymentMethod, $transactionData = [])
     {
+        // Handle FPX specially - get bank name from fpx_buyerBankBranch
+        if ($paymentMethod === 'fpx' && !empty($transactionData['extra'])) {
+            $bankBranch = $this->extractFpxBuyerBankBranch($transactionData['extra']);
+            if (!empty($bankBranch)) {
+                return $bankBranch;
+            }
+        }
+
         $mapping = [
             'razer_atome'     => 'Atome',
             'razer_grabpay'   => 'GrabPay',
@@ -1348,6 +1360,35 @@ class Chip extends AbstractPaymentGateway
         ];
 
         return $mapping[$paymentMethod] ?? $paymentMethod;
+    }
+
+    /**
+     * Extract fpx_buyerBankBranch from transaction_data.extra
+     * The value could be in various nested keys (redirect_payload, payload, callback_payload, etc.)
+     *
+     * @since    1.0.0
+     * @param    array     $extra    The extra data from transaction_data
+     * @return   string              The bank branch name or empty string if not found
+     */
+    protected function extractFpxBuyerBankBranch($extra)
+    {
+        if (!is_array($extra)) {
+            return '';
+        }
+
+        // Search through all keys in extra for fpx_buyerBankBranch
+        foreach ($extra as $key => $value) {
+            if (is_array($value) && isset($value['fpx_buyerBankBranch'])) {
+                $bankBranch = $value['fpx_buyerBankBranch'];
+                // The value might be an array (e.g., ["MAYBANK2U"]), get first element
+                if (is_array($bankBranch)) {
+                    return !empty($bankBranch[0]) ? $bankBranch[0] : '';
+                }
+                return $bankBranch;
+            }
+        }
+
+        return '';
     }
 }
 
