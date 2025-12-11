@@ -47,6 +47,33 @@ class Chip extends AbstractPaymentGateway
 
         // Register settings filter.
         add_filter( 'fluent_cart/payment_methods/chip_settings', array( $this, 'getSettings' ) );
+
+        // Register transaction receipt URL filter.
+        add_filter( 'fluent_cart/transaction/url_chip', array( $this, 'getTransactionReceiptUrl' ), 10, 2 );
+    }
+
+    /**
+     * Get CHIP transaction receipt URL
+     *
+     * @since    1.0.0
+     * @param    string    $url     Default URL (empty)
+     * @param    array     $data    Transaction data containing vendor_charge_id (purchase_id)
+     * @return   string             CHIP receipt URL
+     */
+    public function getTransactionReceiptUrl($url, $data)
+    {
+        // Refund transactions don't have a CHIP receipt
+        if (($data['transaction_type'] ?? '') === 'refund') {
+            return $url;
+        }
+
+        $purchaseId = $data['vendor_charge_id'] ?? '';
+        
+        if (empty($purchaseId)) {
+            return $url;
+        }
+        
+        return 'https://gate.chip-in.asia/p/' . $purchaseId . '/receipt/';
     }
 
     /**
