@@ -54,7 +54,7 @@ jobs:
       - name: Run PHPCS
         run: |
           phpcs --standard=WordPress --extensions=php --ignore=vendor,node_modules --report=checkstyle . | cs2pr
-        continue-on-error: true
+        continue-on-error: false
 
   php-compatibility:
     name: PHP ${{ matrix.php-version }} Compatibility
