@@ -10,7 +10,7 @@ jobs:
 
     steps:
       - name: Checkout Git repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
 
       - name: Check if SVN credentials exist
         id: check-svn
