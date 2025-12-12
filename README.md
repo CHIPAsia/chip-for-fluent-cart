@@ -6,7 +6,7 @@ This module adds CHIP payment method option to your WordPress-based Fluent Cart 
 
 ## Installation
 
-* [Download zip file ofFluent Cart plugin.](https://github.com/CHIPAsia/chip-for-fluent-cart/releases/latest)
+* [Download zip file of Fluent Cart plugin.](https://github.com/CHIPAsia/chip-for-fluent-cart/releases/latest)
 
 * Log in to your WordPress admin panel and go: **Plugins** -> **Add New**
 
