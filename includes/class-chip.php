@@ -180,24 +180,47 @@ class Chip extends AbstractPaymentGateway {
 				}
 			}
 
+			// Get billing address data.
+			$billing_address = $order->billing_address;
+			$billing_street  = '';
+			if ( $billing_address ) {
+				$billing_street = trim( ( $billing_address->address_1 ?? '' ) . ' ' . ( $billing_address->address_2 ?? '' ) );
+			}
+
+			// Get shipping address data.
+			$shipping_address = $order->shipping_address;
+			$shipping_street  = '';
+			if ( $shipping_address ) {
+				$shipping_street = trim( ( $shipping_address->address_1 ?? '' ) . ' ' . ( $shipping_address->address_2 ?? '' ) );
+			}
+
 			// Prepare payment data.
 			$payment_data = array(
-				'amount'                 => $transaction->total,
-				'currency'               => $transaction->currency,
-				'order_id'               => $order->uuid,
-				'customer_email'         => $customer->email,
-				'customer_full_name'     => $customer_full_name,
-				'customer_phone'         => $customer_phone,
-				'customer_country'       => $customer->country,
-				'customer_city'          => $customer->city,
-				'customer_zip_code'      => $customer->postcode,
-				'customer_state'         => $customer->state,
-				'customer_personal_code' => $customer->id,
-				'customer_notes'         => $order->note ?? '',
-				'return_url'             => $this->getReturnUrl( $transaction ),
-				'order_items'            => $order_items,
-				'cancel_url'             => self::getCancelUrl( $transaction ),
-				'transaction_uuid'       => $transaction->uuid,
+				'amount'                   => $transaction->total,
+				'currency'                 => $transaction->currency,
+				'order_id'                 => $order->uuid,
+				'customer_email'           => $customer->email,
+				'customer_full_name'       => $customer_full_name,
+				'customer_phone'           => $customer_phone,
+				'customer_personal_code'   => $customer->id,
+				'customer_notes'           => $order->note ?? '',
+				// Billing address.
+				'billing_street_address'   => $billing_street,
+				'billing_country'          => $billing_address->country ?? '',
+				'billing_city'             => $billing_address->city ?? '',
+				'billing_zip_code'         => $billing_address->postcode ?? '',
+				'billing_state'            => $billing_address->state ?? '',
+				// Shipping address.
+				'shipping_street_address'  => $shipping_street,
+				'shipping_country'         => $shipping_address->country ?? '',
+				'shipping_city'            => $shipping_address->city ?? '',
+				'shipping_zip_code'        => $shipping_address->postcode ?? '',
+				'shipping_state'           => $shipping_address->state ?? '',
+				// Other data.
+				'return_url'               => $this->getReturnUrl( $transaction ),
+				'order_items'              => $order_items,
+				'cancel_url'               => self::getCancelUrl( $transaction ),
+				'transaction_uuid'         => $transaction->uuid,
 			);
 
 			// Process payment with gateway API.
@@ -502,29 +525,43 @@ class Chip extends AbstractPaymentGateway {
 					$chip_params['client']['phone'] = $payment_data['customer_phone'];
 				}
 
-				// Add country.
-				if ( ! empty( $payment_data['customer_country'] ) ) {
-					$chip_params['client']['country'] = $payment_data['customer_country'];
-				}
-
-				// Add city.
-				if ( ! empty( $payment_data['customer_city'] ) ) {
-					$chip_params['client']['city'] = $payment_data['customer_city'];
-				}
-
-				// Add zip code.
-				if ( ! empty( $payment_data['customer_zip_code'] ) ) {
-					$chip_params['client']['zip_code'] = $payment_data['customer_zip_code'];
-				}
-
-				// Add state.
-				if ( ! empty( $payment_data['customer_state'] ) ) {
-					$chip_params['client']['state'] = $payment_data['customer_state'];
-				}
-
 				// Add personal code (customer ID).
 				if ( ! empty( $payment_data['customer_personal_code'] ) ) {
 					$chip_params['client']['personal_code'] = $payment_data['customer_personal_code'];
+				}
+
+				// Add billing address fields.
+				if ( ! empty( $payment_data['billing_street_address'] ) ) {
+					$chip_params['client']['street_address'] = $payment_data['billing_street_address'];
+				}
+				if ( ! empty( $payment_data['billing_country'] ) ) {
+					$chip_params['client']['country'] = $payment_data['billing_country'];
+				}
+				if ( ! empty( $payment_data['billing_city'] ) ) {
+					$chip_params['client']['city'] = $payment_data['billing_city'];
+				}
+				if ( ! empty( $payment_data['billing_zip_code'] ) ) {
+					$chip_params['client']['zip_code'] = $payment_data['billing_zip_code'];
+				}
+				if ( ! empty( $payment_data['billing_state'] ) ) {
+					$chip_params['client']['state'] = $payment_data['billing_state'];
+				}
+
+				// Add shipping address fields.
+				if ( ! empty( $payment_data['shipping_street_address'] ) ) {
+					$chip_params['client']['shipping_street_address'] = $payment_data['shipping_street_address'];
+				}
+				if ( ! empty( $payment_data['shipping_country'] ) ) {
+					$chip_params['client']['shipping_country'] = $payment_data['shipping_country'];
+				}
+				if ( ! empty( $payment_data['shipping_city'] ) ) {
+					$chip_params['client']['shipping_city'] = $payment_data['shipping_city'];
+				}
+				if ( ! empty( $payment_data['shipping_zip_code'] ) ) {
+					$chip_params['client']['shipping_zip_code'] = $payment_data['shipping_zip_code'];
+				}
+				if ( ! empty( $payment_data['shipping_state'] ) ) {
+					$chip_params['client']['shipping_state'] = $payment_data['shipping_state'];
 				}
 			}
 
