@@ -750,7 +750,8 @@ class Chip extends AbstractPaymentGateway {
 	public function getLocalizeData(): array {
 		return array(
 			'fct_chip_data' => array(
-				'translations' => array(
+				'showGatewayDescription' => $this->settings->isShowGatewayDescriptionEnabled(),
+				'translations'           => array(
 					'CHIP - Pay securely with CHIP Collect. Accept FPX, Cards, E-Wallet, Duitnow QR.' => __( 'CHIP - Pay securely with CHIP Collect. Accept FPX, Cards, E-Wallet, Duitnow QR.', 'chip-for-fluent-cart' ),
 				),
 			),
@@ -806,6 +807,13 @@ class Chip extends AbstractPaymentGateway {
 				'required'    => false,
 				'description' => __( 'Fallback email address for purchase creation', 'chip-for-fluent-cart' ),
 			),
+			'show_gateway_description'         => array(
+				'value'       => $settings['show_gateway_description'] ?? 'no',
+				'label'       => __( 'Show Gateway Description', 'chip-for-fluent-cart' ),
+				'type'        => 'checkbox',
+				'required'    => false,
+				'description' => __( 'Display payment gateway description on checkout page.', 'chip-for-fluent-cart' ),
+			),
 			'payment_method_whitelist_heading' => array(
 				'value' =>
 					wp_kses(
@@ -838,10 +846,10 @@ class Chip extends AbstractPaymentGateway {
 					'maestro'         => __( 'Maestro', 'chip-for-fluent-cart' ),
 					'visa'            => __( 'Visa', 'chip-for-fluent-cart' ),
 					'razer_atome'     => __( 'Atome', 'chip-for-fluent-cart' ),
-					'razer_grabpay'   => __( 'Razer GrabPay', 'chip-for-fluent-cart' ),
-					'razer_maybankqr' => __( 'Razer MaybankQR', 'chip-for-fluent-cart' ),
-					'razer_shopeepay' => __( 'Razer ShopeePay', 'chip-for-fluent-cart' ),
-					'razer_tng'       => __( 'Razer TnG', 'chip-for-fluent-cart' ),
+					'razer_grabpay'   => __( 'GrabPay', 'chip-for-fluent-cart' ),
+					'razer_maybankqr' => __( 'MaybankQR', 'chip-for-fluent-cart' ),
+					'razer_shopeepay' => __( 'ShopeePay', 'chip-for-fluent-cart' ),
+					'razer_tng'       => __( 'TnG', 'chip-for-fluent-cart' ),
 					'duitnow_qr'      => __( 'DuitNow QR', 'chip-for-fluent-cart' ),
 					'mpgs_google_pay' => __( 'Google Pay', 'chip-for-fluent-cart' ),
 					'mpgs_apple_pay'  => __( 'Apple Pay', 'chip-for-fluent-cart' ),

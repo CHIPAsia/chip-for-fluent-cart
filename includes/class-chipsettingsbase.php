@@ -47,14 +47,15 @@ class ChipSettingsBase extends BaseGatewaySettings {
 	 */
 	public static function getDefaults(): array {
 		return array(
-			'is_active'                => 'no',
-			'payment_mode'             => 'live',
-			'brand_id'                 => '',
-			'secret_key'               => '',
-			'public_key'               => '',
-			'payment_method_whitelist' => array(),
-			'email_fallback'           => '',
-			'debug'                    => 'no',
+			'is_active'                  => 'no',
+			'payment_mode'               => 'live',
+			'brand_id'                   => '',
+			'secret_key'                 => '',
+			'public_key'                 => '',
+			'payment_method_whitelist'   => array(),
+			'email_fallback'             => '',
+			'show_gateway_description'   => 'no',
+			'debug'                      => 'no',
 		);
 	}
 
@@ -126,6 +127,16 @@ class ChipSettingsBase extends BaseGatewaySettings {
 	 */
 	public function isDebugEnabled() {
 		return 'yes' === ( $this->settings['debug'] ?? 'no' );
+	}
+
+	/**
+	 * Check if gateway description should be shown on checkout.
+	 *
+	 * @since  1.0.0
+	 * @return bool True if gateway description should be shown, false otherwise.
+	 */
+	public function isShowGatewayDescriptionEnabled() {
+		return 'yes' === ( $this->settings['show_gateway_description'] ?? 'no' );
 	}
 
 	/**

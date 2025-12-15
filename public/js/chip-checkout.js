@@ -38,8 +38,9 @@
 			return translations[string] || string;
 		}
 
-		// Display payment instructions in the gateway container
-		if (gatewayContainer) {
+		// Display payment instructions in the gateway container if enabled
+		const showDescription = window.fct_chip_data?.showGatewayDescription || false;
+		if (gatewayContainer && showDescription) {
 			gatewayContainer.innerHTML = `<p>${$t('CHIP - Pay securely with CHIP Collect. Accept FPX, Cards, E-Wallet, Duitnow QR.')}</p>`;
 		}
 
