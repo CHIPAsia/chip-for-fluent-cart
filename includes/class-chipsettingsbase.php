@@ -144,4 +144,3 @@ class ChipSettingsBase extends BaseGatewaySettings {
 		return $settings;
 	}
 }
-

@@ -510,10 +510,10 @@ class Chip extends AbstractPaymentGateway {
 				// TODO: Add platform.
 				// 'platform' => 'fluentcart'.
 				'purchase'         => array(
-					'currency' => $payment_data['currency'],
-					'total_override'   => (int) $payment_data['amount'],
-					'products' => $products,
-					'notes'    => ! empty( $payment_data['customer_notes'] ) ? mb_substr( trim( $payment_data['customer_notes'] ), 0, 1000 ) : '',
+					'currency'       => $payment_data['currency'],
+					'total_override' => (int) $payment_data['amount'],
+					'products'       => $products,
+					'notes'          => ! empty( $payment_data['customer_notes'] ) ? mb_substr( trim( $payment_data['customer_notes'] ), 0, 1000 ) : '',
 				),
 			);
 
