@@ -47,15 +47,15 @@ class ChipSettingsBase extends BaseGatewaySettings {
 	 */
 	public static function getDefaults(): array {
 		return array(
-			'is_active'                  => 'no',
-			'payment_mode'               => 'live',
-			'brand_id'                   => '',
-			'secret_key'                 => '',
-			'public_key'                 => '',
-			'payment_method_whitelist'   => array(),
-			'email_fallback'             => '',
-			'show_gateway_description'   => 'no',
-			'debug'                      => 'no',
+			'is_active'                => 'no',
+			'payment_mode'             => 'live',
+			'brand_id'                 => '',
+			'secret_key'               => '',
+			'public_key'               => '',
+			'payment_method_whitelist' => array(),
+			'email_fallback'           => '',
+			'show_gateway_description' => 'no',
+			'debug'                    => 'no',
 		);
 	}
 
