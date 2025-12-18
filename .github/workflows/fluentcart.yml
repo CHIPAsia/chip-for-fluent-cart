@@ -1,4 +1,4 @@
-name: Fluent Cart - Stable Release
+name: FluentCart - Stable Release
 
 on:
   workflow_dispatch:

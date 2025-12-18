@@ -1,4 +1,4 @@
-name: Fluent Cart - Upload Files
+name: FluentCart - Upload Files
 
 on:
   push:

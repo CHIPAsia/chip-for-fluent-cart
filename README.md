@@ -1,12 +1,12 @@
 <img src="./assets/logo.svg" alt="CHIP Logo" width="50"/>
 
-# CHIP for Fluent Cart
+# CHIP for FluentCart
 
-This module adds CHIP payment method option to your WordPress-based Fluent Cart store.
+This module adds CHIP payment method option to your WordPress-based FluentCart store.
 
 ## Installation
 
-* [Download zip file of Fluent Cart plugin.](https://github.com/CHIPAsia/chip-for-fluent-cart/releases/latest)
+* [Download zip file of FluentCart plugin.](https://github.com/CHIPAsia/chip-for-fluent-cart/releases/latest)
 
 * Log in to your WordPress admin panel and go: **Plugins** -> **Add New**
 
@@ -17,7 +17,7 @@ This module adds CHIP payment method option to your WordPress-based Fluent Cart 
 ## Requirements
 
 * WordPress 6.8 or higher
-* Fluent Cart plugin installed and activated
+* FluentCart plugin installed and activated
 * PHP 7.4 or higher
 
 ## Configuration

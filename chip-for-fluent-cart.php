@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: CHIP for Fluent Cart
+ * Plugin Name: CHIP for FluentCart
  * Plugin URI: https://www.chip-in.asia
- * Description: Integrate CHIP payment gateway with Fluent Cart for seamless payment processing.
+ * Description: Integrate CHIP payment gateway with FluentCart for seamless payment processing.
  * Version: 1.0.0
  * Author: CHIP IN SDN. BHD.
  * License: GPLv3
@@ -27,14 +27,14 @@ if ( ! defined( 'WPINC' ) ) {
 define( 'CHIP_FOR_FLUENTCART_VERSION', '1.0.0' );
 
 /**
- * Register CHIP payment gateway with Fluent Cart.
+ * Register CHIP payment gateway with FluentCart.
  */
 add_action(
 	'fluent_cart/register_payment_methods',
 	function () {
 
 		if ( ! function_exists( 'fluent_cart_api' ) ) {
-			return; // Fluent Cart not active.
+			return; // FluentCart not active.
 		}
 
 		// Include CHIP payment gateway classes.
@@ -57,7 +57,7 @@ add_action(
 	'init',
 	function () {
 		if ( ! function_exists( 'fluent_cart_api' ) ) {
-			return; // Fluent Cart not active.
+			return; // FluentCart not active.
 		}
 
 		// Get the CHIP payment gateway instance using GatewayManager.
