@@ -71,6 +71,18 @@ class Chip extends AbstractPaymentGateway {
 	const PUBLIC_KEY_OPTION = 'chip-for-fluent-cart-public-key';
 
 	/**
+	 * DuitNow QR group: legacy (duitnow_qr) and modern (dnqr) identifiers.
+	 *
+	 * Exposed to merchants as a single "DuitNow QR" group controlled by the
+	 * duitnow_qr entry in the payment_method_whitelist. At runtime the group
+	 * is resolved against /payment_methods/ and dnqr is preferred when both
+	 * are available.
+	 *
+	 * @var array
+	 */
+	const DUITNOW_GROUP = array( 'duitnow_qr', 'dnqr' );
+
+	/**
 	 * Constructor.
 	 *
 	 * @since 1.0.0
@@ -588,7 +600,14 @@ class Chip extends AbstractPaymentGateway {
 			// Add payment method whitelist if configured.
 			$payment_method_whitelist = $this->settings->getPaymentMethodWhitelist();
 			if ( ! empty( $payment_method_whitelist ) && is_array( $payment_method_whitelist ) ) {
-				$chip_params['payment_method_whitelist'] = $payment_method_whitelist;
+				$chip_params['payment_method_whitelist'] = $this->resolveDuitnowMethods(
+					$payment_method_whitelist,
+					$payment_data['currency'],
+					(int) $payment_data['amount'],
+					$brand_id,
+					$secret_key,
+					$debug
+				);
 			}
 
 			// Create payment via CHIP API.
@@ -644,6 +663,75 @@ class Chip extends AbstractPaymentGateway {
 				'error_message' => $e->getMessage(),
 			);
 		}
+	}
+
+	/**
+	 * Resolve the configured payment_method_whitelist against the merchant's
+	 * actual /payment_methods/ response, with dnqr-priority for the DuitNow QR group.
+	 *
+	 * Steps:
+	 *   1. Group expansion: any dnqr-group member in the whitelist expands to the full group.
+	 *   2. Cache key: brand + currency + amount-bucket (round to 100-sen steps).
+	 *   3. Try cache. On miss, call /payment_methods/.
+	 *   4. Fallback: return expanded whitelist unchanged if the API fails.
+	 *   5. Intersect with available methods.
+	 *   6. Priority: dnqr wins when both are present.
+	 *   7. Build the final whitelist (original non-group entries + resolved group).
+	 *
+	 * @since  1.0.0
+	 * @param  array  $whitelist Configured payment_method_whitelist.
+	 * @param  string $currency  Order currency code (e.g. 'MYR').
+	 * @param  int    $amount    Order total in sen (e.g. 12345 = RM 123.45).
+	 * @param  string $brand_id  Brand ID for the cache key.
+	 * @param  string $secret_key API secret key.
+	 * @param  string $debug     Debug mode (yes/no).
+	 * @return array             Final whitelist to send to CHIP.
+	 */
+	protected function resolveDuitnowMethods( $whitelist, $currency, $amount, $brand_id, $secret_key, $debug ) {
+		// 1. Group expansion.
+		$has_group_member = count( array_intersect( $whitelist, self::DUITNOW_GROUP ) ) > 0;
+
+		// Short-circuit: a whitelist that does not intersect the dnqr group
+		// must be returned untouched (no API call, no group injection).
+		if ( ! $has_group_member ) {
+			return $whitelist;
+		}
+
+		$expanded = array_values( array_unique( array_merge( $whitelist, self::DUITNOW_GROUP ) ) );
+
+		// 2. Cache key: brand + currency + amount-bucket (round to 100-sen steps).
+		$cache_key = 'chip_pm_' . md5( $brand_id . '|' . $currency . '|' . intval( $amount / 100 ) );
+
+		// 3. Try cache. If hit, use it. If miss, call /payment_methods/.
+		$available = get_transient( $cache_key );
+		if ( false === $available ) {
+			$logger   = new ChipLogger();
+			$chip_api = new ChipFluentCartApi( $secret_key, $brand_id, $logger, $debug );
+			$response = $chip_api->payment_methods( $currency, '', $amount ); // No language param.
+
+			if ( ! is_array( $response ) || ! isset( $response['available_payment_methods'] ) ) {
+				// 4a. Fallback: return expanded whitelist unchanged.
+				$chip_api->log_info( sprintf( 'dnqr resolver: API failed, fallback to expanded whitelist=%s', implode( ',', $expanded ) ) );
+				return $expanded;
+			}
+
+			$available = $response['available_payment_methods']; // List of method ids the merchant has.
+			set_transient( $cache_key, $available, 30 * MINUTE_IN_SECONDS );
+		}
+
+		// 5. Intersect: keep only group members the merchant actually has.
+		$resolved_group = array_values( array_intersect( self::DUITNOW_GROUP, $available ) );
+
+		// 6. Priority: dnqr wins when both are present.
+		if ( in_array( 'dnqr', $resolved_group, true ) ) {
+			$resolved_group = array_values( array_diff( $resolved_group, array( 'duitnow_qr' ) ) );
+		}
+
+		// 7. Build final whitelist: original entries (with group members stripped) + resolved group.
+		$final = array_values( array_diff( $expanded, self::DUITNOW_GROUP ) );
+		$final = array_merge( $final, $resolved_group );
+
+		return $final;
 	}
 
 	/**

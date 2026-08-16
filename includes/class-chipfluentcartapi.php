@@ -97,6 +97,24 @@ class ChipFluentCartApi {
 	}
 
 	/**
+	 * Get payment methods.
+	 *
+	 * @since 1.0.0
+	 * @param string $currency Currency code.
+	 * @param string $language Language code.
+	 * @param int    $amount   Amount.
+	 * @return array|null API response or null on error.
+	 */
+	public function payment_methods( $currency, $language, $amount ) {
+		$this->log_info( 'fetching payment methods' );
+
+		return $this->call(
+			'GET',
+			"/payment_methods/?brand_id={$this->brand_id}&currency={$currency}&language={$language}&amount={$amount}"
+		);
+	}
+
+	/**
 	 * Get payment details.
 	 *
 	 * @since 1.0.0
