@@ -1,0 +1,34 @@
+name: WordPress Plugin Check (Release)
+
+on:
+  push:
+    tags: [ '**' ]
+  release:
+    types: [ published ]
+
+jobs:
+  plugin-check:
+    name: Plugin Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Prepare plugin directory (git archive)
+        run: |
+          mkdir -p dist/chip-for-fluent-cart
+          git archive HEAD | tar -x -C dist/chip-for-fluent-cart
+
+      - name: Copy .wp-env.json if present
+        run: |
+          if [ -f .wp-env.json ]; then
+            cp .wp-env.json dist/chip-for-fluent-cart/.wp-env.json
+          fi
+          ls -la dist/chip-for-fluent-cart/
+
+      - name: Run Plugin Check
+        uses: wordpress/plugin-check-action@v1
+        with:
+          build-dir: './dist/chip-for-fluent-cart'
+          exclude-directories: 'vendor,node_modules'
