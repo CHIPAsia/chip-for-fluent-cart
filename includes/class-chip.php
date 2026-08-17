@@ -612,6 +612,16 @@ class Chip extends AbstractPaymentGateway {
 			// Add payment method whitelist if configured.
 			$payment_method_whitelist = $this->settings->getPaymentMethodWhitelist();
 			if ( ! empty( $payment_method_whitelist ) && is_array( $payment_method_whitelist ) ) {
+				// In-memory migration: legacy 'razer_shopeepay' → modern 'shopee_pay'.
+				// Keeps merchants who saved the old key working without a settings resave.
+				if ( in_array( 'razer_shopeepay', $payment_method_whitelist, true ) && ! in_array( 'shopee_pay', $payment_method_whitelist, true ) ) {
+					$payment_method_whitelist = array_map(
+						function ( $method ) {
+							return 'razer_shopeepay' === $method ? 'shopee_pay' : $method;
+						},
+						$payment_method_whitelist
+					);
+				}
 				$chip_params['payment_method_whitelist'] = $this->resolveDuitnowMethods(
 					$payment_method_whitelist,
 					$payment_data['currency'],
@@ -957,7 +967,7 @@ class Chip extends AbstractPaymentGateway {
 					'razer_atome'     => __( 'Atome', 'chip-for-fluent-cart' ),
 					'razer_grabpay'   => __( 'GrabPay', 'chip-for-fluent-cart' ),
 					'razer_maybankqr' => __( 'MaybankQR', 'chip-for-fluent-cart' ),
-					'razer_shopeepay' => __( 'ShopeePay', 'chip-for-fluent-cart' ),
+					'shopee_pay'      => __( 'ShopeePay', 'chip-for-fluent-cart' ),
 					'razer_tng'       => __( 'TnG', 'chip-for-fluent-cart' ),
 					'duitnow_qr'      => __( 'DuitNow QR', 'chip-for-fluent-cart' ),
 					'mpgs_google_pay' => __( 'Google Pay', 'chip-for-fluent-cart' ),
@@ -1564,6 +1574,7 @@ class Chip extends AbstractPaymentGateway {
 			'razer_grabpay'   => 'GrabPay',
 			'razer_tng'       => 'TnG',
 			'razer_shopeepay' => 'ShopeePay',
+			'shopee_pay'      => 'ShopeePay',
 		);
 
 		return $mapping[ $payment_method ] ?? $payment_method;
