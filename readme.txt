@@ -3,7 +3,7 @@
 Contributors: chipasia, wanzulnet
 Tags: chip, fluentcart, payment
 Requires at least: 6.8
-Tested up to: 6.9
+Tested up to: 7.0
 Stable tag: 1.0.0
 Requires PHP: 7.4
 License: GPLv3
