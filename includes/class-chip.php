@@ -957,7 +957,7 @@ class Chip extends AbstractPaymentGateway {
 					'razer_atome'     => __( 'Atome', 'chip-for-fluent-cart' ),
 					'razer_grabpay'   => __( 'GrabPay', 'chip-for-fluent-cart' ),
 					'razer_maybankqr' => __( 'MaybankQR', 'chip-for-fluent-cart' ),
-					'razer_shopeepay' => __( 'ShopeePay (incl. Shopee Pay)', 'chip-for-fluent-cart' ),
+					'razer_shopeepay' => __( 'ShopeePay', 'chip-for-fluent-cart' ),
 					'razer_tng'       => __( 'TnG', 'chip-for-fluent-cart' ),
 					'duitnow_qr'      => __( 'DuitNow QR', 'chip-for-fluent-cart' ),
 					'mpgs_google_pay' => __( 'Google Pay', 'chip-for-fluent-cart' ),
