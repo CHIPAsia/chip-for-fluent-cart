@@ -83,6 +83,18 @@ class Chip extends AbstractPaymentGateway {
 	const DUITNOW_GROUP = array( 'duitnow_qr', 'dnqr' );
 
 	/**
+	 * ShopeePay group: legacy (razer_shopeepay) and modern (shopee_pay) identifiers.
+	 *
+	 * Exposed to merchants as a single "ShopeePay" group controlled by the
+	 * razer_shopeepay entry in the payment_method_whitelist. At runtime the group
+	 * is resolved against /payment_methods/ and shopee_pay is preferred when both
+	 * are available.
+	 *
+	 * @var array
+	 */
+	const SHOPEE_GROUP = array( 'razer_shopeepay', 'shopee_pay' );
+
+	/**
 	 * Constructor.
 	 *
 	 * @since 1.0.0
@@ -667,16 +679,20 @@ class Chip extends AbstractPaymentGateway {
 
 	/**
 	 * Resolve the configured payment_method_whitelist against the merchant's
-	 * actual /payment_methods/ response, with dnqr-priority for the DuitNow QR group.
+	 * actual /payment_methods/ response, with preferred-method priority for the
+	 * DuitNow QR and ShopeePay groups.
 	 *
 	 * Steps:
-	 *   1. Group expansion: any dnqr-group member in the whitelist expands to the full group.
-	 *   2. Cache key: brand + currency + amount-bucket (round to 100-sen steps).
-	 *   3. Try cache. On miss, call /payment_methods/.
-	 *   4. Fallback: return expanded whitelist unchanged if the API fails.
-	 *   5. Intersect with available methods.
-	 *   6. Priority: dnqr wins when both are present.
-	 *   7. Build the final whitelist (original non-group entries + resolved group).
+	 *   1. Group expansion: any dnqr-group or shopee-group member in the whitelist
+	 *      expands to the full group.
+	 *   2. Short-circuit: a whitelist that intersects neither group is returned
+	 *      untouched (no API call, no group injection).
+	 *   3. Cache key: brand + currency + amount-bucket (round to 100-sen steps).
+	 *   4. Try cache. On miss, call /payment_methods/ once for both groups.
+	 *   5. Fallback: return expanded whitelist unchanged if the API fails.
+	 *   6. Intersect with available methods.
+	 *   7. Priority: dnqr wins over duitnow_qr; shopee_pay wins over razer_shopeepay.
+	 *   8. Build the final whitelist (original non-group entries + resolved groups).
 	 *
 	 * @since  1.0.0
 	 * @param  array  $whitelist Configured payment_method_whitelist.
@@ -689,20 +705,21 @@ class Chip extends AbstractPaymentGateway {
 	 */
 	protected function resolveDuitnowMethods( $whitelist, $currency, $amount, $brand_id, $secret_key, $debug ) {
 		// 1. Group expansion.
-		$has_group_member = count( array_intersect( $whitelist, self::DUITNOW_GROUP ) ) > 0;
+		$all_groups       = array_merge( self::DUITNOW_GROUP, self::SHOPEE_GROUP );
+		$has_group_member = count( array_intersect( $whitelist, $all_groups ) ) > 0;
 
-		// Short-circuit: a whitelist that does not intersect the dnqr group
+		// 2. Short-circuit: a whitelist that does not intersect either group
 		// must be returned untouched (no API call, no group injection).
 		if ( ! $has_group_member ) {
 			return $whitelist;
 		}
 
-		$expanded = array_values( array_unique( array_merge( $whitelist, self::DUITNOW_GROUP ) ) );
+		$expanded = array_values( array_unique( array_merge( $whitelist, $all_groups ) ) );
 
-		// 2. Cache key: brand + currency + amount-bucket (round to 100-sen steps).
+		// 3. Cache key: brand + currency + amount-bucket (round to 100-sen steps).
 		$cache_key = 'chip_pm_' . md5( $brand_id . '|' . $currency . '|' . intval( $amount / 100 ) );
 
-		// 3. Try cache. If hit, use it. If miss, call /payment_methods/.
+		// 4. Try cache. If hit, use it. If miss, call /payment_methods/ once.
 		$available = get_transient( $cache_key );
 		if ( false === $available ) {
 			$logger   = new ChipLogger();
@@ -710,8 +727,8 @@ class Chip extends AbstractPaymentGateway {
 			$response = $chip_api->payment_methods( $currency, '', $amount ); // No language param.
 
 			if ( ! is_array( $response ) || ! isset( $response['available_payment_methods'] ) ) {
-				// 4a. Fallback: return expanded whitelist unchanged.
-				$chip_api->log_info( sprintf( 'dnqr resolver: API failed, fallback to expanded whitelist=%s', implode( ',', $expanded ) ) );
+				// 5. Fallback: return expanded whitelist unchanged.
+				$chip_api->log_info( sprintf( 'group resolver: API failed, fallback to expanded whitelist=%s', implode( ',', $expanded ) ) );
 				return $expanded;
 			}
 
@@ -719,17 +736,21 @@ class Chip extends AbstractPaymentGateway {
 			set_transient( $cache_key, $available, 30 * MINUTE_IN_SECONDS );
 		}
 
-		// 5. Intersect: keep only group members the merchant actually has.
-		$resolved_group = array_values( array_intersect( self::DUITNOW_GROUP, $available ) );
+		// 6. Intersect: keep only group members the merchant actually has.
+		$resolved_dnqr   = array_values( array_intersect( self::DUITNOW_GROUP, $available ) );
+		$resolved_shopee = array_values( array_intersect( self::SHOPEE_GROUP, $available ) );
 
-		// 6. Priority: dnqr wins when both are present.
-		if ( in_array( 'dnqr', $resolved_group, true ) ) {
-			$resolved_group = array_values( array_diff( $resolved_group, array( 'duitnow_qr' ) ) );
+		// 7. Priority: dnqr wins when both are present; shopee_pay wins when both are present.
+		if ( in_array( 'dnqr', $resolved_dnqr, true ) ) {
+			$resolved_dnqr = array_values( array_diff( $resolved_dnqr, array( 'duitnow_qr' ) ) );
+		}
+		if ( in_array( 'shopee_pay', $resolved_shopee, true ) ) {
+			$resolved_shopee = array_values( array_diff( $resolved_shopee, array( 'razer_shopeepay' ) ) );
 		}
 
-		// 7. Build final whitelist: original entries (with group members stripped) + resolved group.
-		$final = array_values( array_diff( $expanded, self::DUITNOW_GROUP ) );
-		$final = array_merge( $final, $resolved_group );
+		// 8. Build final whitelist: original entries (with group members stripped) + resolved groups.
+		$final = array_values( array_diff( $expanded, $all_groups ) );
+		$final = array_merge( $final, $resolved_dnqr, $resolved_shopee );
 
 		return $final;
 	}
@@ -936,7 +957,7 @@ class Chip extends AbstractPaymentGateway {
 					'razer_atome'     => __( 'Atome', 'chip-for-fluent-cart' ),
 					'razer_grabpay'   => __( 'GrabPay', 'chip-for-fluent-cart' ),
 					'razer_maybankqr' => __( 'MaybankQR', 'chip-for-fluent-cart' ),
-					'razer_shopeepay' => __( 'ShopeePay', 'chip-for-fluent-cart' ),
+					'razer_shopeepay' => __( 'ShopeePay (incl. Shopee Pay)', 'chip-for-fluent-cart' ),
 					'razer_tng'       => __( 'TnG', 'chip-for-fluent-cart' ),
 					'duitnow_qr'      => __( 'DuitNow QR', 'chip-for-fluent-cart' ),
 					'mpgs_google_pay' => __( 'Google Pay', 'chip-for-fluent-cart' ),
