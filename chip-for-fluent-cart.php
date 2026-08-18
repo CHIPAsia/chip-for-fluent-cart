@@ -3,7 +3,7 @@
  * Plugin Name: CHIP for FluentCart
  * Plugin URI: https://www.chip-in.asia
  * Description: Integrate CHIP payment gateway with FluentCart for seamless payment processing.
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: CHIP IN SDN. BHD.
  * License: GPLv3
  * License URI: https://www.gnu.org/licenses/gpl-3.0.html
@@ -24,7 +24,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Define plugin version.
  */
-define( 'CHIP_FOR_FLUENTCART_VERSION', '1.0.0' );
+define( 'CHIP_FOR_FLUENTCART_VERSION', '1.1.0' );
 
 /**
  * Register CHIP payment gateway with FluentCart.
