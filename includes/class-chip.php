@@ -152,7 +152,7 @@ class Chip extends AbstractPaymentGateway {
 			'title'              => __( 'CHIP', 'chip-for-fluent-cart' ),
 			'route'              => 'chip',
 			'slug'               => 'chip',
-			'description'        => esc_html__( 'CHIP - Pay securely with CHIP Collect. Accept FPX, Cards, E-Wallet, Duitnow QR.', 'chip-for-fluent-cart' ),
+			'description'        => esc_html__( 'CHIP Collect - Pay securely with FPX, Cards, E-Wallets, and DuitNow QR.', 'chip-for-fluent-cart' ),
 			'logo'               => plugin_dir_url( __DIR__ ) . 'assets/logo-checkout.png',
 			'icon'               => plugin_dir_url( __DIR__ ) . 'assets/logo.png',
 			'brand_color'        => '#136196',
@@ -871,7 +871,7 @@ class Chip extends AbstractPaymentGateway {
 			'fct_chip_data' => array(
 				'showGatewayDescription' => $this->settings->isShowGatewayDescriptionEnabled(),
 				'translations'           => array(
-					'CHIP - Pay securely with CHIP Collect. Accept FPX, Cards, E-Wallet, Duitnow QR.' => __( 'CHIP - Pay securely with CHIP Collect. Accept FPX, Cards, E-Wallet, Duitnow QR.', 'chip-for-fluent-cart' ),
+					'CHIP Collect - Pay securely with FPX, Cards, E-Wallets, and DuitNow QR.' => __( 'CHIP Collect - Pay securely with FPX, Cards, E-Wallets, and DuitNow QR.', 'chip-for-fluent-cart' ),
 				),
 			),
 		);
