@@ -54,10 +54,6 @@ For integration details, refer to the [API Documentation](https://docs.chip-in.a
 * Update: Tested up to WordPress 7.0
 * Update: Add Requires Plugins fluent-cart
 
-= 1.0.0 2025-12-30 =
-
-* Initial release
-
 [See changelog for all versions](https://raw.githubusercontent.com/CHIPAsia/chip-for-fluent-cart/main/changelog.txt).
 
 == Installation ==
