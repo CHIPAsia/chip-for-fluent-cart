@@ -300,9 +300,11 @@ class Chip extends AbstractPaymentGateway {
 	 */
 	protected function getInitUrl( $transaction ) {
 		// Get or generate passphrase for security.
+		// wp_generate_password with $special_chars=false keeps the passphrase
+		// URL-safe (alphanumeric only) so it survives the redirect round-trip.
 		$passphrase = get_option( self::REDIRECT_PASSPHRASE_OPTION, false );
 		if ( ! $passphrase ) {
-			$passphrase = wp_generate_password( 32, true );
+			$passphrase = wp_generate_password( 32, false );
 			update_option( self::REDIRECT_PASSPHRASE_OPTION, $passphrase );
 		}
 
