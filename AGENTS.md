@@ -113,6 +113,15 @@ The plugin is distributed on both GitHub and WordPress.org SVN.
 - **WordPress.org**: Push a tag matching `fluentcart-upload-v{VERSION}` (e.g., `fluentcart-upload-v1.0.0`) to trigger `fluentcart.upload.yml`, which commits to SVN `/tags/`.
 - **Stable tag**: `fluentcart.yml` copies the latest tag's `readme.txt` to SVN trunk to mark it stable.
 
+### Release checklist (Wajib — jangan skip)
+
+1. **Update `readme.txt` `== Changelog ==` section** dengan entry versi baru — WordPress.org papar changelog dari readme.txt, BUKAN changelog.txt. **Hanya SATU version changelog sahaja dalam readme.txt** (versi terkini). Baki changelog versi lama simpan dalam changelog.txt sahaja (link "See changelog for all versions" di bawah).
+2. Bump version: `chip-for-fluent-cart.php` header + `CHIP_FOR_FLUENTCART_VERSION` constant, `Stable tag` dalam readme.txt, changelog.txt.
+3. Merge semua PR ke main, pastikan working tree clean.
+4. Push tag `fluentcart-upload-v{VERSION}` → trigger SVN upload.
+5. Trigger `fluentcart.yml` (Stable Release) secara manual di Actions.
+6. **Delete branch selepas merge** (setiap kali).
+
 ## Important Constraints
 
 - Requires FluentCart plugin (`Requires Plugins: fluent-cart`). The main file bails early if `fluent_cart_api()` is unavailable.
