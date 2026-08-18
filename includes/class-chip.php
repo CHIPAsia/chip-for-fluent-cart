@@ -693,14 +693,15 @@ class Chip extends AbstractPaymentGateway {
 	 * DuitNow QR and ShopeePay groups.
 	 *
 	 * Steps:
-	 *   1. Group expansion: any dnqr-group or shopee-group member in the whitelist
-	 *      expands to the full group.
+	 *   1. Group expansion: only groups the merchant selected are expanded
+	 *      (DuitNow group when a dnqr-group member is in the whitelist,
+	 *      Shopee group when a shopee-group member is in the whitelist).
 	 *   2. Short-circuit: a whitelist that intersects neither group is returned
 	 *      untouched (no API call, no group injection).
 	 *   3. Cache key: brand + currency + amount-bucket (round to 100-sen steps).
 	 *   4. Try cache. On miss, call /payment_methods/ once for both groups.
 	 *   5. Fallback: return expanded whitelist unchanged if the API fails.
-	 *   6. Intersect with available methods.
+	 *   6. Intersect with available methods (per selected group).
 	 *   7. Priority: dnqr wins over duitnow_qr; shopee_pay wins over razer_shopeepay.
 	 *   8. Build the final whitelist (original non-group entries + resolved groups).
 	 *
@@ -714,17 +715,23 @@ class Chip extends AbstractPaymentGateway {
 	 * @return array             Final whitelist to send to CHIP.
 	 */
 	protected function resolveDuitnowMethods( $whitelist, $currency, $amount, $brand_id, $secret_key, $debug ) {
-		// 1. Group expansion.
-		$all_groups       = array_merge( self::DUITNOW_GROUP, self::SHOPEE_GROUP );
-		$has_group_member = count( array_intersect( $whitelist, $all_groups ) ) > 0;
+		// 1. Group expansion: only expand the groups the merchant selected.
+		$has_dnqr   = count( array_intersect( $whitelist, self::DUITNOW_GROUP ) ) > 0;
+		$has_shopee = count( array_intersect( $whitelist, self::SHOPEE_GROUP ) ) > 0;
 
 		// 2. Short-circuit: a whitelist that does not intersect either group
 		// must be returned untouched (no API call, no group injection).
-		if ( ! $has_group_member ) {
+		if ( ! $has_dnqr && ! $has_shopee ) {
 			return $whitelist;
 		}
 
-		$expanded = array_values( array_unique( array_merge( $whitelist, $all_groups ) ) );
+		$expanded = $whitelist;
+		if ( $has_dnqr ) {
+			$expanded = array_values( array_unique( array_merge( $expanded, self::DUITNOW_GROUP ) ) );
+		}
+		if ( $has_shopee ) {
+			$expanded = array_values( array_unique( array_merge( $expanded, self::SHOPEE_GROUP ) ) );
+		}
 
 		// 3. Cache key: brand + currency + amount-bucket (round to 100-sen steps).
 		$cache_key = 'chip_pm_' . md5( $brand_id . '|' . $currency . '|' . intval( $amount / 100 ) );
@@ -747,8 +754,8 @@ class Chip extends AbstractPaymentGateway {
 		}
 
 		// 6. Intersect: keep only group members the merchant actually has.
-		$resolved_dnqr   = array_values( array_intersect( self::DUITNOW_GROUP, $available ) );
-		$resolved_shopee = array_values( array_intersect( self::SHOPEE_GROUP, $available ) );
+		$resolved_dnqr   = $has_dnqr ? array_values( array_intersect( self::DUITNOW_GROUP, $available ) ) : array();
+		$resolved_shopee = $has_shopee ? array_values( array_intersect( self::SHOPEE_GROUP, $available ) ) : array();
 
 		// 7. Priority: dnqr wins when both are present; shopee_pay wins when both are present.
 		if ( in_array( 'dnqr', $resolved_dnqr, true ) ) {
@@ -759,8 +766,9 @@ class Chip extends AbstractPaymentGateway {
 		}
 
 		// 8. Build final whitelist: original entries (with group members stripped) + resolved groups.
-		$final = array_values( array_diff( $expanded, $all_groups ) );
-		$final = array_merge( $final, $resolved_dnqr, $resolved_shopee );
+		$all_groups = array_merge( self::DUITNOW_GROUP, self::SHOPEE_GROUP );
+		$final      = array_values( array_diff( $expanded, $all_groups ) );
+		$final      = array_merge( $final, $resolved_dnqr, $resolved_shopee );
 
 		return $final;
 	}
