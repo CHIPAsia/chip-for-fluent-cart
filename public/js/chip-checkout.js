@@ -41,7 +41,7 @@
 		// Display payment instructions in the gateway container if enabled
 		const showDescription = window.fct_chip_data?.showGatewayDescription || false;
 		if (gatewayContainer && showDescription) {
-			gatewayContainer.innerHTML = `<p>${$t('CHIP - Pay securely with CHIP Collect. Accept FPX, Cards, E-Wallet, Duitnow QR.')}</p>`;
+			gatewayContainer.innerHTML = `<p>${$t('CHIP Collect - Pay securely with FPX, Cards, E-Wallets, and DuitNow QR.')}</p>`;
 		}
 
 		// Enable the checkout button

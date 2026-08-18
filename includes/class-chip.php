@@ -71,6 +71,30 @@ class Chip extends AbstractPaymentGateway {
 	const PUBLIC_KEY_OPTION = 'chip-for-fluent-cart-public-key';
 
 	/**
+	 * DuitNow QR group: legacy (duitnow_qr) and modern (dnqr) identifiers.
+	 *
+	 * Exposed to merchants as a single "DuitNow QR" group controlled by the
+	 * duitnow_qr entry in the payment_method_whitelist. At runtime the group
+	 * is resolved against /payment_methods/ and dnqr is preferred when both
+	 * are available.
+	 *
+	 * @var array
+	 */
+	const DUITNOW_GROUP = array( 'duitnow_qr', 'dnqr' );
+
+	/**
+	 * ShopeePay group: legacy (razer_shopeepay) and modern (shopee_pay) identifiers.
+	 *
+	 * Exposed to merchants as a single "ShopeePay" group controlled by the
+	 * razer_shopeepay entry in the payment_method_whitelist. At runtime the group
+	 * is resolved against /payment_methods/ and shopee_pay is preferred when both
+	 * are available.
+	 *
+	 * @var array
+	 */
+	const SHOPEE_GROUP = array( 'razer_shopeepay', 'shopee_pay' );
+
+	/**
 	 * Constructor.
 	 *
 	 * @since 1.0.0
@@ -128,7 +152,7 @@ class Chip extends AbstractPaymentGateway {
 			'title'              => __( 'CHIP', 'chip-for-fluent-cart' ),
 			'route'              => 'chip',
 			'slug'               => 'chip',
-			'description'        => esc_html__( 'CHIP - Pay securely with CHIP Collect. Accept FPX, Cards, E-Wallet, Duitnow QR.', 'chip-for-fluent-cart' ),
+			'description'        => esc_html__( 'CHIP Collect - Pay securely with FPX, Cards, E-Wallets, and DuitNow QR.', 'chip-for-fluent-cart' ),
 			'logo'               => plugin_dir_url( __DIR__ ) . 'assets/logo-checkout.png',
 			'icon'               => plugin_dir_url( __DIR__ ) . 'assets/logo.png',
 			'brand_color'        => '#136196',
@@ -276,9 +300,13 @@ class Chip extends AbstractPaymentGateway {
 	 */
 	protected function getInitUrl( $transaction ) {
 		// Get or generate passphrase for security.
+		// wp_generate_password with $special_chars=false keeps the passphrase
+		// URL-safe (alphanumeric only) so it survives the redirect round-trip.
+		// A stored passphrase containing special characters (from the previous
+		// wp_generate_password(32, true) implementation) is regenerated.
 		$passphrase = get_option( self::REDIRECT_PASSPHRASE_OPTION, false );
-		if ( ! $passphrase ) {
-			$passphrase = md5( site_url() . time() . wp_salt() );
+		if ( ! $passphrase || preg_match( '/[^a-zA-Z0-9]/', $passphrase ) ) {
+			$passphrase = wp_generate_password( 32, false );
 			update_option( self::REDIRECT_PASSPHRASE_OPTION, $passphrase );
 		}
 
@@ -588,7 +616,24 @@ class Chip extends AbstractPaymentGateway {
 			// Add payment method whitelist if configured.
 			$payment_method_whitelist = $this->settings->getPaymentMethodWhitelist();
 			if ( ! empty( $payment_method_whitelist ) && is_array( $payment_method_whitelist ) ) {
-				$chip_params['payment_method_whitelist'] = $payment_method_whitelist;
+				// In-memory migration: legacy 'razer_shopeepay' → modern 'shopee_pay'.
+				// Keeps merchants who saved the old key working without a settings resave.
+				if ( in_array( 'razer_shopeepay', $payment_method_whitelist, true ) && ! in_array( 'shopee_pay', $payment_method_whitelist, true ) ) {
+					$payment_method_whitelist = array_map(
+						function ( $method ) {
+							return 'razer_shopeepay' === $method ? 'shopee_pay' : $method;
+						},
+						$payment_method_whitelist
+					);
+				}
+				$chip_params['payment_method_whitelist'] = $this->resolveDuitnowMethods(
+					$payment_method_whitelist,
+					$payment_data['currency'],
+					(int) $payment_data['amount'],
+					$brand_id,
+					$secret_key,
+					$debug
+				);
 			}
 
 			// Create payment via CHIP API.
@@ -644,6 +689,92 @@ class Chip extends AbstractPaymentGateway {
 				'error_message' => $e->getMessage(),
 			);
 		}
+	}
+
+	/**
+	 * Resolve the configured payment_method_whitelist against the merchant's
+	 * actual /payment_methods/ response, with preferred-method priority for the
+	 * DuitNow QR and ShopeePay groups.
+	 *
+	 * Steps:
+	 *   1. Group expansion: only groups the merchant selected are expanded
+	 *      (DuitNow group when a dnqr-group member is in the whitelist,
+	 *      Shopee group when a shopee-group member is in the whitelist).
+	 *   2. Short-circuit: a whitelist that intersects neither group is returned
+	 *      untouched (no API call, no group injection).
+	 *   3. Cache key: brand + currency + amount-bucket (round to 100-sen steps).
+	 *   4. Try cache. On miss, call /payment_methods/ once for both groups.
+	 *   5. Fallback: return expanded whitelist unchanged if the API fails.
+	 *   6. Intersect with available methods (per selected group).
+	 *   7. Priority: dnqr wins over duitnow_qr; shopee_pay wins over razer_shopeepay.
+	 *   8. Build the final whitelist (original non-group entries + resolved groups).
+	 *
+	 * @since  1.0.0
+	 * @param  array  $whitelist Configured payment_method_whitelist.
+	 * @param  string $currency  Order currency code (e.g. 'MYR').
+	 * @param  int    $amount    Order total in sen (e.g. 12345 = RM 123.45).
+	 * @param  string $brand_id  Brand ID for the cache key.
+	 * @param  string $secret_key API secret key.
+	 * @param  string $debug     Debug mode (yes/no).
+	 * @return array             Final whitelist to send to CHIP.
+	 */
+	protected function resolveDuitnowMethods( $whitelist, $currency, $amount, $brand_id, $secret_key, $debug ) {
+		// 1. Group expansion: only expand the groups the merchant selected.
+		$has_dnqr   = count( array_intersect( $whitelist, self::DUITNOW_GROUP ) ) > 0;
+		$has_shopee = count( array_intersect( $whitelist, self::SHOPEE_GROUP ) ) > 0;
+
+		// 2. Short-circuit: a whitelist that does not intersect either group
+		// must be returned untouched (no API call, no group injection).
+		if ( ! $has_dnqr && ! $has_shopee ) {
+			return $whitelist;
+		}
+
+		$expanded = $whitelist;
+		if ( $has_dnqr ) {
+			$expanded = array_values( array_unique( array_merge( $expanded, self::DUITNOW_GROUP ) ) );
+		}
+		if ( $has_shopee ) {
+			$expanded = array_values( array_unique( array_merge( $expanded, self::SHOPEE_GROUP ) ) );
+		}
+
+		// 3. Cache key: brand + currency + amount-bucket (round to 100-sen steps).
+		$cache_key = 'chip_pm_' . md5( $brand_id . '|' . $currency . '|' . intval( $amount / 100 ) );
+
+		// 4. Try cache. If hit, use it. If miss, call /payment_methods/ once.
+		$available = get_transient( $cache_key );
+		if ( false === $available ) {
+			$logger   = new ChipLogger();
+			$chip_api = new ChipFluentCartApi( $secret_key, $brand_id, $logger, $debug );
+			$response = $chip_api->payment_methods( $currency, '', $amount ); // No language param.
+
+			if ( ! is_array( $response ) || ! isset( $response['available_payment_methods'] ) ) {
+				// 5. Fallback: return expanded whitelist unchanged.
+				$chip_api->log_info( sprintf( 'group resolver: API failed, fallback to expanded whitelist=%s', implode( ',', $expanded ) ) );
+				return $expanded;
+			}
+
+			$available = $response['available_payment_methods']; // List of method ids the merchant has.
+			set_transient( $cache_key, $available, 30 * MINUTE_IN_SECONDS );
+		}
+
+		// 6. Intersect: keep only group members the merchant actually has.
+		$resolved_dnqr   = $has_dnqr ? array_values( array_intersect( self::DUITNOW_GROUP, $available ) ) : array();
+		$resolved_shopee = $has_shopee ? array_values( array_intersect( self::SHOPEE_GROUP, $available ) ) : array();
+
+		// 7. Priority: dnqr wins when both are present; shopee_pay wins when both are present.
+		if ( in_array( 'dnqr', $resolved_dnqr, true ) ) {
+			$resolved_dnqr = array_values( array_diff( $resolved_dnqr, array( 'duitnow_qr' ) ) );
+		}
+		if ( in_array( 'shopee_pay', $resolved_shopee, true ) ) {
+			$resolved_shopee = array_values( array_diff( $resolved_shopee, array( 'razer_shopeepay' ) ) );
+		}
+
+		// 8. Build final whitelist: original entries (with group members stripped) + resolved groups.
+		$all_groups = array_merge( self::DUITNOW_GROUP, self::SHOPEE_GROUP );
+		$final      = array_values( array_diff( $expanded, $all_groups ) );
+		$final      = array_merge( $final, $resolved_dnqr, $resolved_shopee );
+
+		return $final;
 	}
 
 	/**
@@ -752,7 +883,7 @@ class Chip extends AbstractPaymentGateway {
 			'fct_chip_data' => array(
 				'showGatewayDescription' => $this->settings->isShowGatewayDescriptionEnabled(),
 				'translations'           => array(
-					'CHIP - Pay securely with CHIP Collect. Accept FPX, Cards, E-Wallet, Duitnow QR.' => __( 'CHIP - Pay securely with CHIP Collect. Accept FPX, Cards, E-Wallet, Duitnow QR.', 'chip-for-fluent-cart' ),
+					'CHIP Collect - Pay securely with FPX, Cards, E-Wallets, and DuitNow QR.' => __( 'CHIP Collect - Pay securely with FPX, Cards, E-Wallets, and DuitNow QR.', 'chip-for-fluent-cart' ),
 				),
 			),
 		);
@@ -775,7 +906,7 @@ class Chip extends AbstractPaymentGateway {
 							"<div class='pt-4'>
                             <p>%s</p>
                         </div>",
-							__( '✅  CHIP is a secure payment gateway that allows customers to pay for their orders online. Configure your API credentials to enable CHIP payments.', 'chip-for-fluent-cart' )
+							__( 'CHIP is a secure payment gateway that allows customers to pay for their orders online. Configure your API credentials to enable CHIP payments.', 'chip-for-fluent-cart' )
 						),
 						array(
 							'p'   => array(),
@@ -848,9 +979,10 @@ class Chip extends AbstractPaymentGateway {
 					'razer_atome'     => __( 'Atome', 'chip-for-fluent-cart' ),
 					'razer_grabpay'   => __( 'GrabPay', 'chip-for-fluent-cart' ),
 					'razer_maybankqr' => __( 'MaybankQR', 'chip-for-fluent-cart' ),
-					'razer_shopeepay' => __( 'ShopeePay', 'chip-for-fluent-cart' ),
+					'shopee_pay'      => __( 'ShopeePay', 'chip-for-fluent-cart' ),
 					'razer_tng'       => __( 'TnG', 'chip-for-fluent-cart' ),
 					'duitnow_qr'      => __( 'DuitNow QR', 'chip-for-fluent-cart' ),
+					'crypto_coin'     => __( 'Crypto Coin', 'chip-for-fluent-cart' ),
 					'mpgs_google_pay' => __( 'Google Pay', 'chip-for-fluent-cart' ),
 					'mpgs_apple_pay'  => __( 'Apple Pay', 'chip-for-fluent-cart' ),
 				),
@@ -877,21 +1009,6 @@ class Chip extends AbstractPaymentGateway {
 			'status'  => 'success',
 			'message' => __( 'Settings saved successfully', 'chip-for-fluent-cart' ),
 		);
-	}
-
-	/**
-	 * Maybe update payment status.
-	 *
-	 * @since    1.0.0
-	 * @param    string $order_hash    Order hash.
-	 * @return   void
-	 */
-	public function maybeUpdatePayments( $order_hash ) {
-		$update_data = array(
-			'status' => Status::PAYMENT_PENDING,
-		);
-		$order       = OrderResource::getOrderByHash( $order_hash );
-		$this->updateOrderDataByOrder( $order, $update_data );
 	}
 
 	/**
@@ -1216,6 +1333,8 @@ class Chip extends AbstractPaymentGateway {
 	/**
 	 * Get order information.
 	 *
+	 * Required by FluentCart's PaymentGatewayInterface.
+	 *
 	 * @since    1.0.0
 	 * @param    array $data    Data array containing order_id.
 	 * @return   array|\WP_Error   Order info array or WP_Error if not found.
@@ -1455,6 +1574,7 @@ class Chip extends AbstractPaymentGateway {
 			'razer_grabpay'   => 'GrabPay',
 			'razer_tng'       => 'TnG',
 			'razer_shopeepay' => 'ShopeePay',
+			'shopee_pay'      => 'ShopeePay',
 		);
 
 		return $mapping[ $payment_method ] ?? $payment_method;
