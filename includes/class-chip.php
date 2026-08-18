@@ -894,7 +894,7 @@ class Chip extends AbstractPaymentGateway {
 							"<div class='pt-4'>
                             <p>%s</p>
                         </div>",
-							__( '✅  CHIP is a secure payment gateway that allows customers to pay for their orders online. Configure your API credentials to enable CHIP payments.', 'chip-for-fluent-cart' )
+							__( 'CHIP is a secure payment gateway that allows customers to pay for their orders online. Configure your API credentials to enable CHIP payments.', 'chip-for-fluent-cart' )
 						),
 						array(
 							'p'   => array(),
