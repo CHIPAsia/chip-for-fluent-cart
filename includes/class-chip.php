@@ -1319,6 +1319,31 @@ class Chip extends AbstractPaymentGateway {
 	}
 
 	/**
+	 * Get order information.
+	 *
+	 * Required by FluentCart's PaymentGatewayInterface.
+	 *
+	 * @since    1.0.0
+	 * @param    array $data    Data array containing order_id.
+	 * @return   array|\WP_Error   Order info array or WP_Error if not found.
+	 */
+	public function getOrderInfo( array $data ) {
+		$order_id = $data['order_id'] ?? '';
+		$order    = Order::where( 'uuid', $order_id )->first();
+
+		if ( ! $order ) {
+			return new \WP_Error( 'order_not_found', 'Order not found' );
+		}
+
+		return array(
+			'order'    => $order,
+			'total'    => $order->total,
+			'currency' => $order->currency,
+			'status'   => $order->status,
+		);
+	}
+
+	/**
 	 * Store purchase ID in fct_order_meta table using OrderMeta model.
 	 *
 	 * @since  1.0.0
