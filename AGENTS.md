@@ -116,6 +116,7 @@ The plugin is distributed on both GitHub and WordPress.org SVN.
 ## Important Constraints
 
 - Requires FluentCart plugin (`Requires Plugins: fluent-cart`). The main file bails early if `fluent_cart_api()` is unavailable.
+- **`getOrderInfo(array $data)` is REQUIRED by FluentCart's `PaymentGatewayInterface`** — do NOT remove it even if it looks unused in the repo. FluentCart calls it from its core. Reference FluentCart source at `~/refs/fluent-cart/` (`app/Modules/PaymentMethods/Core/PaymentGatewayInterface.php`). A missing interface method causes a fatal error on activation (site-wide 500).
 - Amounts are in **cents** (FluentCart handles this before passing to the gateway).
 - The plugin supports both MySQL/MariaDB and PostgreSQL for the database lock mechanism.
 - PHP minimum is 7.4; CI tests against PHP 8.4.
