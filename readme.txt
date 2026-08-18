@@ -44,6 +44,16 @@ For integration details, refer to the [API Documentation](https://docs.chip-in.a
 
 == Changelog ==
 
+= 1.1.0 2026-08-18 =
+
+* Add: DuitNow QR (dnqr) payment method support
+* Add: ShopeePay (shopee_pay) payment method support with legacy razer_shopeepay migration
+* Add: Crypto Coin as payment method option
+* Fix: Correct is_wp_error check in API request handler
+* Fix: Use cryptographically secure passphrase generation for redirect security
+* Update: Tested up to WordPress 7.0
+* Update: Add Requires Plugins fluent-cart
+
 = 1.0.0 2025-12-30 =
 
 * Initial release
