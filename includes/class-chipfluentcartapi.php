@@ -214,6 +214,12 @@ class ChipFluentCartApi {
 	 * @return string Response body.
 	 */
 	private function request( $method, $url, $params = array(), $headers = array() ) {
+		// Redact the Authorization header (Bearer secret key) before logging.
+		$log_headers = $headers;
+		if ( isset( $log_headers['Authorization'] ) ) {
+			$log_headers['Authorization'] = 'Bearer [REDACTED]';
+		}
+
 		$this->log_info(
 			sprintf(
 				"%s `%s`\n%s\n%s",
@@ -222,7 +228,7 @@ class ChipFluentCartApi {
 				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Debug logging only when enabled.
 				print_r( $params, true ),
 				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Debug logging only when enabled.
-				print_r( $headers, true )
+				print_r( $log_headers, true )
 			)
 		);
 
