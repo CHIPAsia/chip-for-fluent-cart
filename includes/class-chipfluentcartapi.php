@@ -216,7 +216,7 @@ class ChipFluentCartApi {
 	private function request( $method, $url, $params = array(), $headers = array() ) {
 		$this->log_info(
 			sprintf(
-				'%s `%s`\n%s\n%s',
+				"%s `%s`\n%s\n%s",
 				$method,
 				$url,
 				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Debug logging only when enabled.
@@ -237,6 +237,11 @@ class ChipFluentCartApi {
 			)
 		);
 
+		if ( is_wp_error( $wp_request ) ) {
+			$this->log_error( 'wp_remote_request', $wp_request->get_error_message() );
+			return '';
+		}
+
 		$response = wp_remote_retrieve_body( $wp_request );
 		$code     = wp_remote_retrieve_response_code( $wp_request );
 
@@ -245,10 +250,6 @@ class ChipFluentCartApi {
 				sprintf( '%s %s: %d', $method, $url, $code ),
 				$response
 			);
-		}
-
-		if ( is_wp_error( $response ) ) {
-			$this->log_error( 'wp_remote_request', $response->get_error_message() );
 		}
 
 		return $response;

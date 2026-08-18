@@ -1,3 +1,9 @@
+= 1.0.1 2026-05-19 =
+
+* Fix: Correct is_wp_error check in API request handler
+* Fix: Use cryptographically secure passphrase generation for redirect security
+* Update: Tested up to WordPress 7.0
+
 = 1.0.0 2025-12-06 =
 
 * Initial release

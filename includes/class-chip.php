@@ -302,7 +302,7 @@ class Chip extends AbstractPaymentGateway {
 		// Get or generate passphrase for security.
 		$passphrase = get_option( self::REDIRECT_PASSPHRASE_OPTION, false );
 		if ( ! $passphrase ) {
-			$passphrase = md5( site_url() . time() . wp_salt() );
+			$passphrase = wp_generate_password( 32, true );
 			update_option( self::REDIRECT_PASSPHRASE_OPTION, $passphrase );
 		}
 
@@ -1000,21 +1000,6 @@ class Chip extends AbstractPaymentGateway {
 	}
 
 	/**
-	 * Maybe update payment status.
-	 *
-	 * @since    1.0.0
-	 * @param    string $order_hash    Order hash.
-	 * @return   void
-	 */
-	public function maybeUpdatePayments( $order_hash ) {
-		$update_data = array(
-			'status' => Status::PAYMENT_PENDING,
-		);
-		$order       = OrderResource::getOrderByHash( $order_hash );
-		$this->updateOrderDataByOrder( $order, $update_data );
-	}
-
-	/**
 	 * Process refund via CHIP API.
 	 *
 	 * @since    1.0.0
@@ -1331,29 +1316,6 @@ class Chip extends AbstractPaymentGateway {
 			// Always release lock.
 			$this->releaseLock( $order->id );
 		}
-	}
-
-	/**
-	 * Get order information.
-	 *
-	 * @since    1.0.0
-	 * @param    array $data    Data array containing order_id.
-	 * @return   array|\WP_Error   Order info array or WP_Error if not found.
-	 */
-	public function getOrderInfo( array $data ) {
-		$order_id = $data['order_id'] ?? '';
-		$order    = Order::where( 'uuid', $order_id )->first();
-
-		if ( ! $order ) {
-			return new \WP_Error( 'order_not_found', 'Order not found' );
-		}
-
-		return array(
-			'order'    => $order,
-			'total'    => $order->total,
-			'currency' => $order->currency,
-			'status'   => $order->status,
-		);
 	}
 
 	/**
